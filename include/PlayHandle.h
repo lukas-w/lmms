@@ -27,6 +27,7 @@
 
 #include <QtCore/QThread>
 #include <QtCore/QVector>
+#include <QtCore/QMutex>
 
 #include "ThreadableJob.h"
 #include "lmms_basics.h"
@@ -84,12 +85,23 @@ public:
 		return !isFinished();
 	}
 
-
+	void lock()
+	{
+		m_processingLock.lock();
+	}
+	void unlock()
+	{
+		m_processingLock.unlock();
+	}
+	bool tryLock()
+	{
+		return m_processingLock.tryLock();
+	}
 	virtual void play( sampleFrame* buffer ) = 0;
 	virtual bool isFinished( void ) const = 0;
 
-	// returns how many frames this play-handle is aligned ahead, i.e.
-	// at which position it is inserted in the according buffer
+	// returns the frameoffset at the start of the playhandle,
+	// ie. how many empty frames should be inserted at the start of the first period
 	f_cnt_t offset() const
 	{
 		return m_offset;
@@ -108,6 +120,7 @@ private:
 	Type m_type;
 	f_cnt_t m_offset;
 	const QThread* m_affinity;
+	QMutex m_processingLock;
 
 } ;
 

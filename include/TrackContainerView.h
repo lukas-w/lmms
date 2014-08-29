@@ -27,8 +27,8 @@
 #define TRACK_CONTAINER_VIEW_H
 
 #include <QtCore/QVector>
-#include <QtGui/QScrollArea>
-#include <QtGui/QWidget>
+#include <QScrollArea>
+#include <QWidget>
 
 
 #include "track.h"
@@ -79,7 +79,7 @@ public:
 
 	inline bool rubberBandActive() const
 	{
-		return( m_rubberBand->isVisible() );
+		return( m_rubberBand->isEnabled() && m_rubberBand->isVisible() );
 	}
 
 	inline QVector<selectableObject *> selectedObjects()

@@ -106,8 +106,6 @@ public:
 
 		Interpolation interpolation;
 		Oversampling oversampling;
-		bool sampleExactControllers;
-		bool aliasFreeOscillators;
 
 		qualitySettings( Mode _m )
 		{
@@ -116,31 +114,22 @@ public:
 				case Mode_Draft:
 					interpolation = Interpolation_Linear;
 					oversampling = Oversampling_None;
-					sampleExactControllers = false;
-					aliasFreeOscillators = false;
 					break;
 				case Mode_HighQuality:
 					interpolation =
 						Interpolation_SincFastest;
 					oversampling = Oversampling_2x;
-					sampleExactControllers = true;
-					aliasFreeOscillators = false;
 					break;
 				case Mode_FinalMix:
 					interpolation = Interpolation_SincBest;
 					oversampling = Oversampling_8x;
-					sampleExactControllers = true;
-					aliasFreeOscillators = true;
 					break;
 			}
 		}
 
-		qualitySettings( Interpolation _i, Oversampling _o, bool _sec,
-								bool _afo ) :
+		qualitySettings( Interpolation _i, Oversampling _o ) :
 			interpolation( _i ),
-			oversampling( _o ),
-			sampleExactControllers( _sec ),
-			aliasFreeOscillators( _afo )
+			oversampling( _o )
 		{
 		}
 
@@ -222,9 +211,9 @@ public:
 	{
 		if( criticalXRuns() == false )
 		{
-			lock();
-			m_playHandles.push_back( handle );
-			unlock();
+			m_playHandleMutex.lock();
+			m_newPlayHandles.append( handle );
+			m_playHandleMutex.unlock();
 			return true;
 		}
 
@@ -240,7 +229,7 @@ public:
 		return m_playHandles;
 	}
 
-	void removePlayHandles( track * _track );
+	void removePlayHandles( track * _track, bool removeIPHs = true );
 
 	bool hasNotePlayHandles();
 
@@ -319,11 +308,20 @@ public:
 	{
 		m_inputFramesMutex.unlock();
 	}
+	
+	void lockPlayHandleRemoval()
+	{
+		m_playHandleRemovalMutex.lock();
+	}
+	
+	void unlockPlayHandleRemoval()
+	{
+		m_playHandleRemovalMutex.unlock();
+	}
 
 	// audio-buffer-mgm
 	void bufferToPort( const sampleFrame * _buf,
 					const fpp_t _frames,
-					const f_cnt_t _offset,
 					stereoVolumeVector _volume_vector,
 					AudioPort * _port );
 
@@ -440,6 +438,8 @@ private:
 	int m_numWorkers;
 	QWaitCondition m_queueReadyWaitCond;
 
+	PlayHandleList m_newPlayHandles;	// place where new playhandles are added temporarily
+	QMutex m_playHandleMutex;			// mutex used only for adding playhandles
 
 	PlayHandleList m_playHandles;
 	ConstPlayHandleList m_playHandlesToRemove;
@@ -459,7 +459,8 @@ private:
 
 	QMutex m_globalMutex;
 	QMutex m_inputFramesMutex;
-
+	
+	QMutex m_playHandleRemovalMutex;
 
 	fifo * m_fifo;
 	fifoWriter * m_fifoWriter;

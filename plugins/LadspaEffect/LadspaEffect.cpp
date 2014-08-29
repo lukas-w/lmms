@@ -24,7 +24,7 @@
  */
 
 
-#include <QtGui/QMessageBox>
+#include <QMessageBox>
 
 #include "LadspaEffect.h"
 #include "DataFile.h"
@@ -79,7 +79,7 @@ LadspaEffect::LadspaEffect( Model * _parent,
 							arg( m_key.second ),
 				QMessageBox::Ok, QMessageBox::NoButton );
 		}
-		setOkay( FALSE );
+		setOkay( false );
 		return;
 	}
 
@@ -138,16 +138,17 @@ bool LadspaEffect::processAudioBuffer( sampleFrame * _buf,
 	if( !isOkay() || dontRun() || !isRunning() || !isEnabled() )
 	{
 		m_pluginMutex.unlock();
-		return( FALSE );
+		return( false );
 	}
 
 	int frames = _frames;
 	sampleFrame * o_buf = NULL;
+	sampleFrame sBuf [_frames];
 
 	if( m_maxSampleRate < engine::mixer()->processingSampleRate() )
 	{
 		o_buf = _buf;
-		_buf = new sampleFrame[_frames];
+		_buf = &sBuf[0];
 		sampleDown( o_buf, _buf, m_maxSampleRate );
 		frames = _frames * m_maxSampleRate /
 				engine::mixer()->processingSampleRate();
@@ -250,7 +251,6 @@ bool LadspaEffect::processAudioBuffer( sampleFrame * _buf,
 	if( o_buf != NULL )
 	{
 		sampleBack( _buf, o_buf, m_maxSampleRate );
-		delete[] _buf;
 	}
 
 	checkGate( out_sum / frames );
@@ -453,7 +453,7 @@ void LadspaEffect::pluginInstantiation()
 		QMessageBox::warning( 0, "Effect", 
 			"Can't get LADSPA descriptor function: " + m_key.second,
 			QMessageBox::Ok, QMessageBox::NoButton );
-		setOkay( FALSE );
+		setOkay( false );
 		return;
 	}
 	if( m_descriptor->run == NULL )
@@ -461,7 +461,7 @@ void LadspaEffect::pluginInstantiation()
 		QMessageBox::warning( 0, "Effect",
 			"Plugin has no processor: " + m_key.second,
 			QMessageBox::Ok, QMessageBox::NoButton );
-		setDontRun( TRUE );
+		setDontRun( true );
 	}
 	for( ch_cnt_t proc = 0; proc < processorCount(); proc++ )
 	{
@@ -472,7 +472,7 @@ void LadspaEffect::pluginInstantiation()
 			QMessageBox::warning( 0, "Effect",
 				"Can't get LADSPA instance: " + m_key.second,
 				QMessageBox::Ok, QMessageBox::NoButton );
-			setOkay( FALSE );
+			setOkay( false );
 			return;
 		}
 		m_handles.append( effect );
@@ -492,7 +492,7 @@ void LadspaEffect::pluginInstantiation()
 				QMessageBox::warning( 0, "Effect", 
 				"Failed to connect port: " + m_key.second, 
 				QMessageBox::Ok, QMessageBox::NoButton );
-				setDontRun( TRUE );
+				setDontRun( true );
 				return;
 			}
 		}
@@ -577,5 +577,5 @@ Plugin * PLUGIN_EXPORT lmms_plugin_main( Model * _parent, void * _data )
 }
 
 
-#include "moc_LadspaEffect.cxx"
+
 

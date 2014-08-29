@@ -24,13 +24,13 @@
 
 #include "vestige.h"
 
-#include <QtGui/QDropEvent>
-#include <QtGui/QMessageBox>
-#include <QtGui/QPainter>
-#include <QtGui/QPushButton>
-#include <QtGui/QMdiArea>
-#include <QtGui/QMenu>
-#include <QtXml/QDomElement>
+#include <QDropEvent>
+#include <QMessageBox>
+#include <QPainter>
+#include <QPushButton>
+#include <QMdiArea>
+#include <QMenu>
+#include <QDomElement>
 
 #include "engine.h"
 #include "gui_templates.h"
@@ -170,9 +170,10 @@ void vestigeInstrument::saveSettings( QDomDocument & _doc, QDomElement & _this )
 {
 	if( QFileInfo( m_pluginDLL ).isAbsolute() )
 	{
-		QString relativePath;
-		if( !( relativePath = m_pluginDLL.section( configManager::
-					inst()->vstDir(), 1, 1 ) ).isEmpty() )
+		QString f = QString( m_pluginDLL ).replace( QDir::separator(), '/' );
+		QString vd = QString( configManager::inst()->vstDir() ).replace( QDir::separator(), '/' );
+        	QString relativePath;
+		if( !( relativePath = f.section( vd, 1, 1 ) ).isEmpty() )
 		{
 			m_pluginDLL = relativePath;
 		}
@@ -237,9 +238,10 @@ void vestigeInstrument::loadFile( const QString & _file )
 {
 	m_pluginMutex.lock();
 	const bool set_ch_name = ( m_plugin != NULL &&
-		instrumentTrack()->name() == m_plugin->name() ) ||
-			instrumentTrack()->name() ==
-				InstrumentTrack::tr( "Default preset" );
+        	instrumentTrack()->name() == m_plugin->name() ) ||
+            	instrumentTrack()->name() == InstrumentTrack::tr( "Default preset" ) ||
+            	instrumentTrack()->name() == displayName();
+
 	m_pluginMutex.unlock();
 
 	if ( m_plugin != NULL )
@@ -310,12 +312,12 @@ void vestigeInstrument::play( sampleFrame * _buf )
 
 
 
-bool vestigeInstrument::handleMidiEvent( const MidiEvent& event, const MidiTime& time )
+bool vestigeInstrument::handleMidiEvent( const MidiEvent& event, const MidiTime& time, f_cnt_t offset )
 {
 	m_pluginMutex.lock();
 	if( m_plugin != NULL )
 	{
-		m_plugin->processMidiEvent( event, time );
+		m_plugin->processMidiEvent( event, offset );
 	}
 	m_pluginMutex.unlock();
 
@@ -550,7 +552,7 @@ void VestigeInstrumentView::managePlugin( void )
 	if ( m_vi->m_plugin != NULL && m_vi->m_subWindow == NULL ) {
 		m_vi->p_subWindow = new manageVestigeInstrumentView( _instrument2, _parent2, m_vi);
 	} else if (m_vi->m_subWindow != NULL) {
-		if (m_vi->m_subWindow->widget()->isVisible() == FALSE) {
+		if (m_vi->m_subWindow->widget()->isVisible() == false ) {
 			m_vi->m_scrollArea->show();
 			m_vi->m_subWindow->show();
 		} else {
@@ -632,7 +634,7 @@ void VestigeInstrumentView::openPlugin()
 	types << tr( "DLL-files (*.dll)" )
 		<< tr( "EXE-files (*.exe)" )
 		;
-	ofd.setFilters( types );
+	ofd.setNameFilters( types );
 	if( m_vi->m_pluginDLL != "" )
 	{
 		// select previously opened file
@@ -881,8 +883,9 @@ manageVestigeInstrumentView::manageVestigeInstrumentView( Instrument * _instrume
 
 	m_vi->m_subWindow = engine::mainWindow()->workspace()->addSubWindow(new QMdiSubWindow, Qt::SubWindow |
 			Qt::CustomizeWindowHint | Qt::WindowTitleHint | Qt::WindowSystemMenuHint);
-	m_vi->m_subWindow->setSizePolicy( QSizePolicy::Fixed, QSizePolicy::Fixed );
-	m_vi->m_subWindow->setFixedSize( 960, 300);
+	m_vi->m_subWindow->setSizePolicy( QSizePolicy::Fixed, QSizePolicy::MinimumExpanding );
+	m_vi->m_subWindow->setFixedWidth( 960 );
+	m_vi->m_subWindow->setMinimumHeight( 300 );
 	m_vi->m_subWindow->setWidget(m_vi->m_scrollArea);
 	m_vi->m_subWindow->setWindowTitle( m_vi->instrumentTrack()->name()
 								+ tr( " - VST plugin control" ) );
@@ -1163,5 +1166,5 @@ Plugin * PLUGIN_EXPORT lmms_plugin_main( Model *, void * _data )
 }
 
 
-#include "moc_vestige.cxx"
+
 

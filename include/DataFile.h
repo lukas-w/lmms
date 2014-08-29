@@ -27,7 +27,7 @@
 #ifndef DATA_FILE_H
 #define DATA_FILE_H
 
-#include <QtXml/QDomDocument>
+#include <QDomDocument>
 #include <QTextStream>
 
 #include "export.h"
@@ -76,6 +76,24 @@ public:
 	{
 		return m_type;
 	}
+
+	// small helper class for adjusting application's locale settings
+	// when loading or saving floating point values rendered to strings
+	class LocaleHelper
+	{
+	public:
+		enum Modes
+		{
+			ModeLoad,
+			ModeSave,
+			ModeCount
+		};
+		typedef Modes Mode;
+
+		LocaleHelper( Mode mode );
+		~LocaleHelper();
+
+	};
 
 
 private:

@@ -24,8 +24,8 @@
  */
 
 
-#include <QtGui/QPainter>
-#include <QtXml/QDomElement>
+#include <QPainter>
+#include <QDomElement>
 
 #include <cstdio>
 
@@ -317,6 +317,7 @@ void sidInstrument::playNote( NotePlayHandle * _n,
 		_n->m_pluginData = sid;
 	}
 	const fpp_t frames = _n->framesLeftForCurrentPeriod();
+	const f_cnt_t offset = _n->noteOffset();
 
 	cSID *sid = static_cast<cSID *>( _n->m_pluginData );
 	int delta_t = clockrate * frames / samplerate + 4;
@@ -430,11 +431,11 @@ void sidInstrument::playNote( NotePlayHandle * _n,
 		sample_t s = float(buf[frame])/32768.0;
 		for( ch_cnt_t ch = 0; ch < DEFAULT_CHANNELS; ++ch )
 		{
-			_working_buffer[frame][ch] = s;
+			_working_buffer[frame+offset][ch] = s;
 		}
 	}
 
-	instrumentTrack()->processAudioBuffer( _working_buffer, frames, _n );
+	instrumentTrack()->processAudioBuffer( _working_buffer, frames + offset, _n );
 }
 
 
@@ -693,19 +694,19 @@ void sidInstrumentView::updateKnobHint()
 	for( int i = 0; i < 3; ++i )
 	{
 		m_voiceKnobs[i].m_attKnob->setHintText( tr( "Attack:" ) + " ", " (" +
-				QString::fromAscii( attackTime[(int)k->m_voice[i]->
+				QString::fromLatin1( attackTime[(int)k->m_voice[i]->
 				m_attackModel.value()] ) + ")" );
 		toolTip::add( m_voiceKnobs[i].m_attKnob,
 						attackTime[(int)k->m_voice[i]->m_attackModel.value()] );
 
 		m_voiceKnobs[i].m_decKnob->setHintText( tr( "Decay:" ) + " ", " (" +
-				QString::fromAscii( decRelTime[(int)k->m_voice[i]->
+				QString::fromLatin1( decRelTime[(int)k->m_voice[i]->
 				m_decayModel.value()] ) + ")" );
 		toolTip::add( m_voiceKnobs[i].m_decKnob,
 						decRelTime[(int)k->m_voice[i]->m_decayModel.value()] );
 
 		m_voiceKnobs[i].m_relKnob->setHintText( tr( "Release:" ) + " ", " (" +
-				QString::fromAscii( decRelTime[(int)k->m_voice[i]->
+				QString::fromLatin1( decRelTime[(int)k->m_voice[i]->
 				m_releaseModel.value()] )  + ")" );
 		toolTip::add( m_voiceKnobs[i].m_relKnob,
 						decRelTime[(int)k->m_voice[i]->m_releaseModel.value()]);
@@ -829,5 +830,5 @@ Plugin * PLUGIN_EXPORT lmms_plugin_main( Model *, void * _data )
 }
 
 
-#include "moc_sid_instrument.cxx"
+
 

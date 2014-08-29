@@ -24,11 +24,11 @@
  *
  */
 
-#include <QtCore/QCoreApplication>
-#include <QtCore/QDebug>
-#include <QtCore/QDir>
-#include <QtCore/QFileInfo>
-#include <QtCore/QLibrary>
+#include <QCoreApplication>
+#include <QDebug>
+#include <QDir>
+#include <QFileInfo>
+#include <QLibrary>
 
 #include <math.h>
 
@@ -46,10 +46,11 @@ ladspaManager::ladspaManager()
 	ladspaDirectories.push_back( configManager::inst()->pluginDir() + "ladspa" );
 #ifndef LMMS_BUILD_WIN32
 	ladspaDirectories.push_back( qApp->applicationDirPath() + '/' + LIB_DIR + "ladspa" );
-	ladspaDirectories.push_back( "/usr/lib/lmms/ladspa" );
-	ladspaDirectories.push_back( "/usr/local/lib/lmms/ladspa" );
 	ladspaDirectories.push_back( "/usr/lib/ladspa" );
+	ladspaDirectories.push_back( "/usr/lib64/ladspa" );
 	ladspaDirectories.push_back( "/usr/local/lib/ladspa" );
+	ladspaDirectories.push_back( "/usr/local/lib64/ladspa" );
+	ladspaDirectories.push_back( "/Library/Audio/Plug-Ins/LADSPA" );
 #endif
 
 	for( QStringList::iterator it = ladspaDirectories.begin(); 

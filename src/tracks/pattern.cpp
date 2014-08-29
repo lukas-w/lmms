@@ -23,14 +23,14 @@
  *
  */
 
-#include <QtXml/QDomElement>
-#include <QtCore/QTimer>
-#include <QtGui/QMenu>
-#include <QtGui/QMessageBox>
-#include <QtGui/QMouseEvent>
-#include <QtGui/QPainter>
-#include <QtGui/QProgressBar>
-#include <QtGui/QPushButton>
+#include <QDomElement>
+#include <QTimer>
+#include <QMenu>
+#include <QMessageBox>
+#include <QMouseEvent>
+#include <QPainter>
+#include <QProgressBar>
+#include <QPushButton>
 #include <QtAlgorithms>
 
 #include "pattern.h"
@@ -174,7 +174,7 @@ note * pattern::addNote( const note & _new_note, const bool _quant_pos )
 		new_note->quantizePos( engine::pianoRoll()->quantization() );
 	}
 
-	engine::mixer()->lock();
+	instrumentTrack()->lock();
 	if( m_notes.size() == 0 || m_notes.back()->pos() <= new_note->pos() )
 	{
 		m_notes.push_back( new_note );
@@ -197,7 +197,7 @@ note * pattern::addNote( const note & _new_note, const bool _quant_pos )
 
 		m_notes.insert( it, new_note );
 	}
-	engine::mixer()->unlock();
+	instrumentTrack()->unlock();
 
 	checkType();
 	changeLength( length() );
@@ -214,7 +214,7 @@ note * pattern::addNote( const note & _new_note, const bool _quant_pos )
 
 void pattern::removeNote( const note * _note_to_del )
 {
-	engine::mixer()->lock();
+	instrumentTrack()->lock();
 	NoteVector::Iterator it = m_notes.begin();
 	while( it != m_notes.end() )
 	{
@@ -226,7 +226,7 @@ void pattern::removeNote( const note * _note_to_del )
 		}
 		++it;
 	}
-	engine::mixer()->unlock();
+	instrumentTrack()->unlock();
 
 	checkType();
 	changeLength( length() );
@@ -276,14 +276,14 @@ void pattern::rearrangeAllNotes()
 
 void pattern::clearNotes()
 {
-	engine::mixer()->lock();
+	instrumentTrack()->lock();
 	for( NoteVector::Iterator it = m_notes.begin(); it != m_notes.end();
 									++it )
 	{
 		delete *it;
 	}
 	m_notes.clear();
-	engine::mixer()->unlock();
+	instrumentTrack()->unlock();
 
 	checkType();
 	emit dataChanged();
@@ -422,6 +422,7 @@ void pattern::loadSettings( const QDomElement & _this )
 
 void pattern::clear()
 {
+	addJournalCheckPoint();
 	clearNotes();
 	ensureBeatNotes();
 }
@@ -650,6 +651,8 @@ patternView::~patternView()
 {
 	if( engine::pianoRoll()->currentPattern() == m_pat )
 	{
+		engine::pianoRoll()->disconnect( this );
+
 		engine::pianoRoll()->setCurrentPattern( NULL );
 		// we have to have the song-editor to stop playing if it played
 		// us before
@@ -855,27 +858,27 @@ void patternView::wheelEvent( QWheelEvent * _we )
 		{
 			vol = n->getVolume();
 			len = n->length();
-		}
 
-		if( len == 0 && _we->delta() > 0 )
-		{
-			n->setLength( -DefaultTicksPerTact );
-			n->setVolume( 5 );
-		}
-		else if( _we->delta() > 0 )
-		{
-			n->setVolume( qMin( 100, vol + 5 ) );
-		}
-		else
-		{
-			n->setVolume( qMax( 0, vol - 5 ) );
-		}
+			if( len == 0 && _we->delta() > 0 )
+			{
+				n->setLength( -DefaultTicksPerTact );
+				n->setVolume( 5 );
+			}
+			else if( _we->delta() > 0 )
+			{
+				n->setVolume( qMin( 100, vol + 5 ) );
+			}
+			else
+			{
+				n->setVolume( qMax( 0, vol - 5 ) );
+			}
 
-		engine::getSong()->setModified();
-		update();
-		if( engine::pianoRoll()->currentPattern() == m_pat )
-		{
-			engine::pianoRoll()->update();
+			engine::getSong()->setModified();
+			update();
+			if( engine::pianoRoll()->currentPattern() == m_pat )
+			{
+				engine::pianoRoll()->update();
+			}
 		}
 		_we->accept();
 	}
@@ -1158,6 +1161,6 @@ void patternView::paintEvent( QPaintEvent * )
 
 
 
-#include "moc_pattern.cxx"
+
 
 

@@ -24,13 +24,13 @@
  */
 
 
-#include <QtGui/QHBoxLayout>
-#include <QtGui/QKeyEvent>
-#include <QtGui/QLineEdit>
-#include <QtGui/QMenu>
-#include <QtGui/QPushButton>
-#include <QtGui/QMdiArea>
-#include <QtGui/QMdiSubWindow>
+#include <QHBoxLayout>
+#include <QKeyEvent>
+#include <QLineEdit>
+#include <QMenu>
+#include <QPushButton>
+#include <QMdiArea>
+#include <QMdiSubWindow>
 
 #include "file_browser.h"
 #include "bb_track_container.h"
@@ -484,18 +484,20 @@ void fileBrowserTreeWidget::mouseMoveEvent( QMouseEvent * _me )
 	new stringPairDrag( "samplefile", f->fullName(),
 				embed::getIconPixmap( "sample_file" ), this );
 					break;
-
+				case fileItem::SoundFontFile:
+ 	new stringPairDrag( "soundfontfile", f->fullName(),
+ 				embed::getIconPixmap( "soundfont_file" ), this );
+ 					break;
+				case fileItem::VstPluginFile:
+	new stringPairDrag( "vstpluginfile", f->fullName(),
+				embed::getIconPixmap( "vst_plugin_file" ), this );
+					break;
 				case fileItem::MidiFile:
 // don't allow dragging FLP-files as FLP import filter clears project
 // without asking
 //				case fileItem::FlpFile:
 	new stringPairDrag( "importedproject", f->fullName(),
 				embed::getIconPixmap( "midi_file" ), this );
-					break;
-
-				case fileItem::VstPluginFile:
-	new stringPairDrag( "vstplugin", f->fullName(),
-				embed::getIconPixmap( "sample_file" ), this );
 					break;
 
 				default:
@@ -613,12 +615,12 @@ void fileBrowserTreeWidget::activateListItem( QTreeWidgetItem * _item,
 	}
 	else if( f->handling() != fileItem::NotSupported )
 	{
-		engine::mixer()->lock();
+//		engine::mixer()->lock();
 		InstrumentTrack * it = dynamic_cast<InstrumentTrack *>(
 				track::create( track::InstrumentTrack,
 					engine::getBBTrackContainer() ) );
 		handleFile( f, it );
-		engine::mixer()->unlock();
+//		engine::mixer()->unlock();
 	}
 }
 
@@ -630,11 +632,11 @@ void fileBrowserTreeWidget::openInNewInstrumentTrack( TrackContainer* tc )
 	if( m_contextMenuItem->handling() == fileItem::LoadAsPreset ||
 		m_contextMenuItem->handling() == fileItem::LoadByPlugin )
 	{
-		engine::mixer()->lock();
+//		engine::mixer()->lock();
 		InstrumentTrack * it = dynamic_cast<InstrumentTrack *>(
 				track::create( track::InstrumentTrack, tc ) );
 		handleFile( m_contextMenuItem, it );
-		engine::mixer()->unlock();
+//		engine::mixer()->unlock();
 	}
 }
 
@@ -857,6 +859,8 @@ bool directory::addItems( const QString & _path )
 QPixmap * fileItem::s_projectFilePixmap = NULL;
 QPixmap * fileItem::s_presetFilePixmap = NULL;
 QPixmap * fileItem::s_sampleFilePixmap = NULL;
+QPixmap * fileItem::s_soundfontFilePixmap = NULL;
+QPixmap * fileItem::s_vstPluginFilePixmap = NULL;
 QPixmap * fileItem::s_midiFilePixmap = NULL;
 QPixmap * fileItem::s_flpFilePixmap = NULL;
 QPixmap * fileItem::s_unknownFilePixmap = NULL;
@@ -905,6 +909,18 @@ void fileItem::initPixmaps( void )
 						"sample_file", 16, 16 ) );
 	}
 
+	if ( s_soundfontFilePixmap == NULL )
+	{
+		s_soundfontFilePixmap = new QPixmap( embed::getIconPixmap(
+						"soundfont_file", 16, 16 ) );
+	}
+	
+	if ( s_vstPluginFilePixmap == NULL ) 
+	{
+		s_vstPluginFilePixmap = new QPixmap( embed::getIconPixmap(
+						"vst_plugin_file", 16, 16 ) );
+	}
+
 	if( s_midiFilePixmap == NULL )
 	{
 		s_midiFilePixmap = new QPixmap( embed::getIconPixmap(
@@ -931,8 +947,13 @@ void fileItem::initPixmaps( void )
 		case PresetFile:
 			setIcon( 0, *s_presetFilePixmap );
 			break;
+		case SoundFontFile:
+			setIcon( 0, *s_soundfontFilePixmap );
+			break;
+		case VstPluginFile:
+			setIcon( 0, *s_vstPluginFilePixmap );
+			break;
 		case SampleFile:
-		case SoundFontFile:		// TODO
 		case PatchFile:			// TODO
 			setIcon( 0, *s_sampleFilePixmap );
 			break;
@@ -1032,5 +1053,5 @@ QString fileItem::extension( const QString & _file )
 
 
 
-#include "moc_file_browser.cxx"
+
 

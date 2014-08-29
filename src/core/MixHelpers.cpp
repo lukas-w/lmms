@@ -22,9 +22,9 @@
  *
  */
 
-#include <math.h>
-
+#include "lmms_math.h"
 #include "MixHelpers.h"
+#include "ValueBuffer.h"
 
 
 namespace MixHelpers
@@ -102,6 +102,45 @@ struct AddMultipliedOp
 void addMultiplied( sampleFrame* dst, const sampleFrame* src, float coeffSrc, int frames )
 {
 	run<>( dst, src, frames, AddMultipliedOp(coeffSrc) );
+}
+
+
+void addMultipliedByBuffer( sampleFrame* dst, const sampleFrame* src, float coeffSrc, ValueBuffer * coeffSrcBuf, int frames )
+{
+	for( int f = 0; f < frames; ++f )
+	{
+		dst[f][0] += src[f][0] * coeffSrc * coeffSrcBuf->values()[f];
+		dst[f][1] += src[f][1] * coeffSrc * coeffSrcBuf->values()[f];
+	}
+}
+
+void addMultipliedByBuffers( sampleFrame* dst, const sampleFrame* src, ValueBuffer * coeffSrcBuf1, ValueBuffer * coeffSrcBuf2, int frames )
+{
+	for( int f = 0; f < frames; ++f )
+	{
+		dst[f][0] += src[f][0] * coeffSrcBuf1->values()[f] * coeffSrcBuf2->values()[f];
+		dst[f][1] += src[f][1] * coeffSrcBuf1->values()[f] * coeffSrcBuf2->values()[f];
+	}
+
+}
+
+
+struct AddSanitizedMultipliedOp
+{
+	AddSanitizedMultipliedOp( float coeff ) : m_coeff( coeff ) { }
+	
+	void operator()( sampleFrame& dst, const sampleFrame& src ) const
+	{
+		dst[0] += ( isinff( src[0] ) || isnanf( src[0] ) ) ? 0.0f : src[0] * m_coeff;
+		dst[1] += ( isinff( src[1] ) || isnanf( src[1] ) ) ? 0.0f : src[1] * m_coeff;
+	}
+
+	const float m_coeff;
+};
+
+void addSanitizedMultiplied( sampleFrame* dst, const sampleFrame* src, float coeffSrc, int frames )
+{
+	run<>( dst, src, frames, AddSanitizedMultipliedOp(coeffSrc) );
 }
 
 

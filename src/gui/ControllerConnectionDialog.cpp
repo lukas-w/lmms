@@ -23,10 +23,10 @@
  *
  */
 
-#include <QtGui/QLayout>
-#include <QtGui/QLineEdit>
-#include <QtGui/QPushButton>
-#include <QtGui/QScrollArea>
+#include <QLayout>
+#include <QLineEdit>
+#include <QPushButton>
+#include <QScrollArea>
 #include <QMessageBox>
 
 #include "ControllerConnectionDialog.h"
@@ -63,7 +63,7 @@ public:
 	}
 
 
-	virtual void processInEvent( const MidiEvent& event, const MidiTime& time )
+	virtual void processInEvent( const MidiEvent& event, const MidiTime& time, f_cnt_t offset = 0 )
 	{
 		if( event.type() == MidiControlChange &&
 			( m_midiPort.inputChannel() == 0 || m_midiPort.inputChannel() == event.channel() + 1 ) )
@@ -432,5 +432,5 @@ void ControllerConnectionDialog::enableAutoDetect( QAction * _a )
 
 
 
-#include "moc_ControllerConnectionDialog.cxx"
+
 

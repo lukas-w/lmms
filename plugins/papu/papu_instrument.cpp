@@ -24,8 +24,8 @@
  */
 
 
-#include <QtGui/QPainter>
-#include <QtXml/QDomElement>
+#include <QPainter>
+#include <QDomElement>
 #include "Basic_Gb_Apu.h"
 
 #include "papu_instrument.h"
@@ -238,6 +238,7 @@ void papuInstrument::playNote( NotePlayHandle * _n,
 	const f_cnt_t tfp = _n->totalFramesPlayed();
 	const int samplerate = engine::mixer()->processingSampleRate();
 	const fpp_t frames = _n->framesLeftForCurrentPeriod();
+	const f_cnt_t offset = _n->noteOffset();
 
 	int data = 0;
 	int freq = _n->frequency();
@@ -400,12 +401,12 @@ void papuInstrument::playNote( NotePlayHandle * _n,
 			for( ch_cnt_t ch = 0; ch < DEFAULT_CHANNELS; ++ch )
 			{
 				sample_t s = float(buf[frame*2+ch])/32768.0;
-				_working_buffer[frames-framesleft+frame][ch] = s;
+				_working_buffer[frames-framesleft+frame+offset][ch] = s;
 			}
 		}
 		framesleft -= count;
 	}
-	instrumentTrack()->processAudioBuffer( _working_buffer, frames, _n );
+	instrumentTrack()->processAudioBuffer( _working_buffer, frames + offset, _n );
 }
 
 
@@ -743,4 +744,4 @@ Plugin * PLUGIN_EXPORT lmms_plugin_main( Model *, void * _data )
 
 }
 
-#include "moc_papu_instrument.cxx"
+

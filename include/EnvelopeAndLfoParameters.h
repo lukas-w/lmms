@@ -22,8 +22,8 @@
  *
  */
 
-#ifndef _ENVELOPE_AND_LFO_PARAMETERS_H
-#define _ENVELOPE_AND_LFO_PARAMETERS_H
+#ifndef ENVELOPE_AND_LFO_PARAMETERS_H
+#define ENVELOPE_AND_LFO_PARAMETERS_H
 
 #include <QtCore/QVector>
 
@@ -138,6 +138,8 @@ private:
 	f_cnt_t m_rFrames;
 	sample_t * m_pahdEnv;
 	sample_t * m_rEnv;
+	f_cnt_t m_pahdBufSize;
+	f_cnt_t m_rBufSize;
 
 
 	FloatModel m_lfoPredelayModel;
@@ -157,6 +159,7 @@ private:
 	float m_lfoAmount;
 	bool m_lfoAmountIsZero;
 	sample_t * m_lfoShapeData;
+	sample_t m_random;
 	bool m_bad_lfoShapeData;
 	SampleBuffer m_userWave;
 
@@ -167,12 +170,12 @@ private:
 		SawWave,
 		SquareWave,
 		UserDefinedWave,
+		RandomWave,
 		NumLfoShapes
 	} ;
 
 	sample_t lfoShapeSample( fpp_t _frame_offset );
 	void updateLfoShapeData();
-
 
 
 	friend class EnvelopeAndLfoView;

@@ -23,19 +23,19 @@
  *
  */
 
-#include <QtCore/QDir>
-#include <QtCore/QFile>
-#include <QtCore/QQueue>
-#include <QtGui/QApplication>
-#include <QtGui/QCloseEvent>
-#include <QtGui/QLabel>
-#include <QtGui/QLayout>
-#include <QtGui/QLineEdit>
-#include <QtGui/QMdiArea>
-#include <QtGui/QMenu>
-#include <QtGui/QMessageBox>
-#include <QtGui/QMdiSubWindow>
-#include <QtGui/QPainter>
+#include <QDir>
+#include <QFile>
+#include <QQueue>
+#include <QApplication>
+#include <QCloseEvent>
+#include <QLabel>
+#include <QLayout>
+#include <QLineEdit>
+#include <QMdiArea>
+#include <QMenu>
+#include <QMessageBox>
+#include <QMdiSubWindow>
+#include <QPainter>
 
 #include "FileDialog.h"
 #include "InstrumentTrack.h"
@@ -76,7 +76,7 @@
 #include "tab_widget.h"
 #include "tooltip.h"
 #include "track_label_button.h"
-
+#include "ValueBuffer.h"
 
 
 const char * volume_help = QT_TRANSLATE_NOOP( "InstrumentTrack",
@@ -135,12 +135,17 @@ InstrumentTrack::InstrumentTrack( TrackContainer* tc ) :
 }
 
 
+int InstrumentTrack::baseNote() const
+{
+	return m_baseNoteModel.value() - engine::getSong()->masterPitch();
+}
+
 
 
 InstrumentTrack::~InstrumentTrack()
 {
-	// kill all running notes
-	silenceAllNotes();
+	// kill all running notes and the iph
+	silenceAllNotes( true );
 
 	// now we're save deleting the instrument
 	delete m_instrument;
@@ -152,7 +157,7 @@ InstrumentTrack::~InstrumentTrack()
 void InstrumentTrack::processAudioBuffer( sampleFrame* buf, const fpp_t frames, NotePlayHandle* n )
 {
 	// we must not play the sound if this InstrumentTrack is muted...
-	if( isMuted() || ( n && n->isBbTrackMuted() ) )
+	if( isMuted() || ( n && n->isBbTrackMuted() ) || ! m_instrument )
 	{
 		return;
 	}
@@ -181,33 +186,58 @@ void InstrumentTrack::processAudioBuffer( sampleFrame* buf, const fpp_t frames, 
 	// now
 	m_audioPort.effects()->startRunning();
 
-	float v_scale = (float) getVolume() / DefaultVolume;
+	// get volume knob data
+	static const float DefaultVolumeRatio = 1.0f / DefaultVolume;
+	ValueBuffer * volBuf = m_volumeModel.valueBuffer();
+	float v_scale = volBuf
+		? 1.0f
+		: getVolume() * DefaultVolumeRatio;
 
 	// instruments using instrument-play-handles will call this method
 	// without any knowledge about notes, so they pass NULL for n, which
 	// is no problem for us since we just bypass the envelopes+LFOs
 	if( m_instrument->flags().testFlag( Instrument::IsSingleStreamed ) == false && n != NULL )
 	{
-		m_soundShaping.processAudioBuffer( buf, frames, n );
-		v_scale *= ( (float) n->getVolume() / DefaultVolume );
+		const f_cnt_t offset = n->noteOffset();
+		m_soundShaping.processAudioBuffer( buf + offset, frames - offset, n );
+		v_scale *= ( (float) n->getVolume() * DefaultVolumeRatio );
 	}
 
 	m_audioPort.setNextFxChannel( m_effectChannelModel.value() );
 	
-	int framesToMix = frames;
-	int offset = 0;
-	int panning = m_panningModel.value();
+	// get panning knob data
+	ValueBuffer * panBuf = m_panningModel.valueBuffer();
+	int panning = panBuf
+		? 0
+		: m_panningModel.value();
 
 	if( n )
 	{
-		framesToMix = qMin<f_cnt_t>( n->framesLeftForCurrentPeriod(), framesToMix );
-		offset = n->offset();
-
 		panning += n->getPanning();
 		panning = tLimit<int>( panning, PanningLeft, PanningRight );
 	}
 
-	engine::mixer()->bufferToPort( buf, framesToMix, offset, panningToVolumeVector( panning, v_scale ), &m_audioPort );
+	// apply sample-exact volume/panning data
+	if( volBuf )
+	{
+		for( f_cnt_t f = 0; f < frames; ++f )
+		{
+			float v = volBuf->values()[ f ] * 0.01f;
+			buf[f][0] *= v;
+			buf[f][1] *= v;
+		}
+	}
+	if( panBuf )
+	{
+		for( f_cnt_t f = 0; f < frames; ++f )
+		{
+			float p = panBuf->values()[ f ] * 0.01f;
+			buf[f][0] *= ( p <= 0 ? 1.0f : 1.0f - p );
+			buf[f][1] *= ( p >= 0 ? 1.0f : 1.0f + p );
+		}
+	}
+
+	engine::mixer()->bufferToPort( buf, frames, panningToVolumeVector( panning, v_scale ), &m_audioPort );
 }
 
 
@@ -232,10 +262,8 @@ MidiEvent InstrumentTrack::applyMasterKey( const MidiEvent& event )
 
 
 
-void InstrumentTrack::processInEvent( const MidiEvent& event, const MidiTime& time )
+void InstrumentTrack::processInEvent( const MidiEvent& event, const MidiTime& time, f_cnt_t offset )
 {
-	engine::mixer()->lock();
-
 	bool eventHandled = false;
 
 	switch( event.type() )
@@ -246,32 +274,36 @@ void InstrumentTrack::processInEvent( const MidiEvent& event, const MidiTime& ti
 		case MidiNoteOn:
 			if( event.velocity() > 0 )
 			{
+				NotePlayHandle* nph;
+				m_notesMutex.lock();
 				if( m_notes[event.key()] == NULL )
 				{
-					// create (timed) note-play-handle
-					NotePlayHandle* nph = new NotePlayHandle( this, time.frames( engine::framesPerTick() ),
-																typeInfo<f_cnt_t>::max() / 2,
-																note( MidiTime(), MidiTime(), event.key(), event.volume( midiPort()->baseVelocity() ) ),
-																NULL, event.channel(),
-																NotePlayHandle::OriginMidiInput );
-					if( engine::mixer()->addPlayHandle( nph ) )
+					nph = new NotePlayHandle( this, offset,
+								typeInfo<f_cnt_t>::max() / 2,
+								note( MidiTime(), MidiTime(), event.key(), event.volume( midiPort()->baseVelocity() ) ),
+								NULL, event.channel(),
+								NotePlayHandle::OriginMidiInput );
+					m_notes[event.key()] = nph;
+					if( ! engine::mixer()->addPlayHandle( nph ) )
 					{
-						m_notes[event.key()] = nph;
+						m_notes[event.key()] = NULL;
 					}
 				}
-
+				m_notesMutex.unlock();
 				eventHandled = true;
 				break;
 			}
 
 		case MidiNoteOff:
+			m_notesMutex.lock();
 			if( m_notes[event.key()] != NULL )
 			{
 				// do actual note off and remove internal reference to NotePlayHandle (which itself will
 				// be deleted later automatically)
-				m_notes[event.key()]->noteOff();
+				m_notes[event.key()]->noteOff( offset );
 				m_notes[event.key()] = NULL;
 			}
+			m_notesMutex.unlock();
 			eventHandled = true;
 			break;
 
@@ -335,18 +367,17 @@ void InstrumentTrack::processInEvent( const MidiEvent& event, const MidiTime& ti
 			break;
 	}
 
-	if( eventHandled == false && instrument()->handleMidiEvent( event, time ) == false )
+	if( eventHandled == false && instrument()->handleMidiEvent( event, time, offset ) == false )
 	{
 		qWarning( "InstrumentTrack: unhandled MIDI event %d", event.type() );
 	}
 
-	engine::mixer()->unlock();
 }
 
 
 
 
-void InstrumentTrack::processOutEvent( const MidiEvent& event, const MidiTime& time )
+void InstrumentTrack::processOutEvent( const MidiEvent& event, const MidiTime& time, f_cnt_t offset )
 {
 	// do nothing if we do not have an instrument instance (e.g. when loading settings)
 	if( m_instrument == NULL )
@@ -360,33 +391,35 @@ void InstrumentTrack::processOutEvent( const MidiEvent& event, const MidiTime& t
 	switch( event.type() )
 	{
 		case MidiNoteOn:
+			m_midiNotesMutex.lock();
 			m_piano.setKeyState( event.key(), true );	// event.key() = original key
 
 			if( key >= 0 && key < NumKeys )
 			{
 				if( m_runningMidiNotes[key] > 0 )
 				{
-					m_instrument->handleMidiEvent( MidiEvent( MidiNoteOff, midiPort()->realOutputChannel(), key, 0 ), time );
+					m_instrument->handleMidiEvent( MidiEvent( MidiNoteOff, midiPort()->realOutputChannel(), key, 0 ), time, offset );
 				}
 				++m_runningMidiNotes[key];
-				m_instrument->handleMidiEvent( MidiEvent( MidiNoteOn, midiPort()->realOutputChannel(), key, event.velocity() ), time );
-
+				m_instrument->handleMidiEvent( MidiEvent( MidiNoteOn, midiPort()->realOutputChannel(), key, event.velocity() ), time, offset );
 				emit newNote();
 			}
+			m_midiNotesMutex.unlock();
 			break;
 
 		case MidiNoteOff:
+			m_midiNotesMutex.lock();
 			m_piano.setKeyState( event.key(), false );	// event.key() = original key
 
 			if( key >= 0 && key < NumKeys && --m_runningMidiNotes[key] <= 0 )
 			{
-				m_runningMidiNotes[key] = qMax( 0, m_runningMidiNotes[key] );
-				m_instrument->handleMidiEvent( MidiEvent( MidiNoteOff, midiPort()->realOutputChannel(), key, 0 ), time );
+				m_instrument->handleMidiEvent( MidiEvent( MidiNoteOff, midiPort()->realOutputChannel(), key, 0 ), time, offset );
 			}
+			m_midiNotesMutex.unlock();
 			break;
 
 		default:
-			m_instrument->handleMidiEvent( transposedEvent, time );
+			m_instrument->handleMidiEvent( transposedEvent, time, offset );
 			break;
 	}
 
@@ -397,19 +430,23 @@ void InstrumentTrack::processOutEvent( const MidiEvent& event, const MidiTime& t
 
 
 
-void InstrumentTrack::silenceAllNotes()
+void InstrumentTrack::silenceAllNotes( bool removeIPH )
 {
-	engine::mixer()->lock();
+	m_notesMutex.lock();
+	m_midiNotesMutex.lock();
 	for( int i = 0; i < NumKeys; ++i )
 	{
 		m_notes[i] = NULL;
 		m_runningMidiNotes[i] = 0;
 	}
+	m_notesMutex.unlock();
+	m_midiNotesMutex.unlock();
 
+	lock();
 	// invalidate all NotePlayHandles linked to this track
 	m_processHandles.clear();
-	engine::mixer()->removePlayHandles( this );
-	engine::mixer()->unlock();
+	engine::mixer()->removePlayHandles( this, removeIPH );
+	unlock();
 }
 
 
@@ -498,13 +535,13 @@ void InstrumentTrack::setName( const QString & _new_name )
 
 void InstrumentTrack::updateBaseNote()
 {
-	engine::mixer()->lock();
 	for( NotePlayHandleList::Iterator it = m_processHandles.begin();
 					it != m_processHandles.end(); ++it )
 	{
+		( *it )->lock();
 		( *it )->updateFrequency();
+		( *it )->unlock();
 	}
-	engine::mixer()->unlock();
 }
 
 
@@ -537,7 +574,7 @@ void InstrumentTrack::updatePitchRange()
 
 int InstrumentTrack::masterKey( int _midi_key ) const
 {
-	int key = m_baseNoteModel.value() - engine::getSong()->masterPitch();
+	int key = baseNote();
 	return tLimit<int>( _midi_key - ( key - DefaultKey ), 0, NumKeys );
 }
 
@@ -556,6 +593,10 @@ void InstrumentTrack::removeMidiPortNode( DataFile & _dataFile )
 bool InstrumentTrack::play( const MidiTime & _start, const fpp_t _frames,
 							const f_cnt_t _offset, int _tco_num )
 {
+	if( ! tryLock() || ! m_instrument )
+	{
+		return false;
+	}
 	const float frames_per_tick = engine::framesPerTick();
 
 	tcoVector tcos;
@@ -581,6 +622,7 @@ bool InstrumentTrack::play( const MidiTime & _start, const fpp_t _frames,
 
 	if ( tcos.size() == 0 )
 	{
+		unlock();
 		return false;
 	}
 
@@ -644,6 +686,7 @@ bool InstrumentTrack::play( const MidiTime & _start, const fpp_t _frames,
 			++nit;
 		}
 	}
+	unlock();
 	return played_a_note;
 }
 
@@ -695,15 +738,15 @@ void InstrumentTrack::saveTrackSpecificSettings( QDomDocument& doc, QDomElement 
 
 void InstrumentTrack::loadTrackSpecificSettings( const QDomElement & thisElement )
 {
-	silenceAllNotes();
+	silenceAllNotes( true );
 
-	engine::mixer()->lock();
+	lock();
 
 	m_volumeModel.loadSettings( thisElement, "vol" );
 	m_panningModel.loadSettings( thisElement, "pan" );
 	m_pitchRangeModel.loadSettings( thisElement, "pitchrange" );
 	m_pitchModel.loadSettings( thisElement, "pitch" );
-	m_effectChannelModel.setRange( 0, INT_MAX );
+	m_effectChannelModel.setRange( 0, engine::fxMixer()->numChannels()-1 );
 	m_effectChannelModel.loadSettings( thisElement, "fxch" );
 	m_baseNoteModel.loadSettings( thisElement, "basenote" );
 
@@ -763,7 +806,7 @@ void InstrumentTrack::loadTrackSpecificSettings( const QDomElement & thisElement
 		}
 		node = node.nextSibling();
 	}
-	engine::mixer()->unlock();
+	unlock();
 }
 
 
@@ -771,12 +814,12 @@ void InstrumentTrack::loadTrackSpecificSettings( const QDomElement & thisElement
 
 Instrument * InstrumentTrack::loadInstrument( const QString & _plugin_name )
 {
-	silenceAllNotes();
+	silenceAllNotes( true );
 
-	engine::mixer()->lock();
+	lock();
 	delete m_instrument;
 	m_instrument = Instrument::instantiate( _plugin_name, this );
-	engine::mixer()->unlock();
+	unlock();
 
 	setName( m_instrument->displayName() );
 	emit instrumentChanged();
@@ -1201,11 +1244,10 @@ InstrumentTrackWindow::InstrumentTrackWindow( InstrumentTrackView * _itv ) :
 
 	connect( saveSettingsBtn, SIGNAL( clicked() ), this, SLOT( saveSettingsBtnClicked() ) );
 
-	toolTip::add( saveSettingsBtn, tr( "Save current channel settings in a preset-file" ) );
+	toolTip::add( saveSettingsBtn, tr( "Save current instrument track settings in a preset file" ) );
 	saveSettingsBtn->setWhatsThis(
-		tr( "Click here, if you want to save current channel settings "
-			"in a preset-file. Later you can load this preset by "
-			"double-clicking it in the preset-browser." ) );
+		tr( "Click here, if you want to save current instrument track settings in a preset file. "
+			"Later you can load this preset by double-clicking it in the preset-browser." ) );
 
 	basicControlsLayout->addWidget( saveSettingsBtn );
 
@@ -1323,6 +1365,7 @@ void InstrumentTrackWindow::modelChanged()
 		m_pitchKnob->setModel( &m_track->m_pitchModel );
 		m_pitchRangeSpinBox->setModel( &m_track->m_pitchRangeModel );
 		m_pitchKnob->show();
+		m_pitchRangeSpinBox->show();
 	}
 	else
 	{
@@ -1364,6 +1407,8 @@ void InstrumentTrackWindow::saveSettingsBtnClicked()
 		!sfd.selectedFiles().isEmpty() &&
 		!sfd.selectedFiles().first().isEmpty() )
 	{
+		DataFile::LocaleHelper localeHelper( DataFile::LocaleHelper::ModeSave );
+
 		DataFile dataFile( DataFile::InstrumentTrackSettings );
 		m_track->setSimpleSerializing();
 		m_track->saveSettings( dataFile, dataFile.content() );
@@ -1544,6 +1589,6 @@ void InstrumentTrackWindow::loadSettings( const QDomElement& thisElement )
 
 
 
-#include "moc_InstrumentTrack.cxx"
+
 
 

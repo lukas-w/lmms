@@ -4,7 +4,7 @@
  *                        for all drag'n'drop-actions within LMMS
  *
  * Copyright (c) 2005-2008 Tobias Doerffel <tobydox/at/users.sourceforge.net>
- * 
+ *
  * This file is part of Linux MultiMedia Studio - http://lmms.sourceforge.net
  *
  * This program is free software; you can redistribute it and/or
@@ -25,9 +25,9 @@
  */
 
 
-#include <QtCore/QMimeData>
-#include <QtGui/QDragEnterEvent>
-#include <QtGui/QDropEvent>
+#include <QMimeData>
+#include <QDragEnterEvent>
+#include <QDropEvent>
 
 
 #include "string_pair_drag.h"
@@ -52,7 +52,7 @@ stringPairDrag::stringPairDrag( const QString & _key, const QString & _value,
 	}
 	QString txt = _key + ":" + _value;
 	QMimeData * m = new QMimeData();
-	m->setData( mimeType(), txt.toAscii() );
+	m->setData( mimeType(), txt.toLatin1() );
 	setMimeData( m );
 	start( Qt::IgnoreAction );
 }
@@ -78,16 +78,32 @@ bool stringPairDrag::processDragEnterEvent( QDragEnterEvent * _dee,
 {
 	if( !_dee->mimeData()->hasFormat( mimeType() ) )
 	{
-		return( FALSE );
+		return( false );
 	}
 	QString txt = _dee->mimeData()->data( mimeType() );
 	if( _allowed_keys.split( ',' ).contains( txt.section( ':', 0, 0 ) ) )
 	{
 		_dee->acceptProposedAction();
-		return( TRUE );
+		return( true );
 	}
 	_dee->ignore();
-	return( FALSE );
+	return( false );
+}
+
+
+
+
+QString stringPairDrag::decodeMimeKey( const QMimeData * mimeData )
+{
+	return( QString( mimeData->data( mimeType() ) ).section( ':', 0, 0 ) );
+}
+
+
+
+
+QString stringPairDrag::decodeMimeValue( const QMimeData * mimeData )
+{
+	return( QString( mimeData->data( mimeType() ) ).section( ':', 1, -1 ) );
 }
 
 
@@ -95,8 +111,7 @@ bool stringPairDrag::processDragEnterEvent( QDragEnterEvent * _dee,
 
 QString stringPairDrag::decodeKey( QDropEvent * _de )
 {
-	return( QString( _de->mimeData()->data( mimeType()
-						) ).section( ':', 0, 0 ) );
+	return decodeMimeKey( _de->mimeData() );
 }
 
 
@@ -104,8 +119,5 @@ QString stringPairDrag::decodeKey( QDropEvent * _de )
 
 QString stringPairDrag::decodeValue( QDropEvent * _de )
 {
-	return( QString( _de->mimeData()->data( mimeType()
-						) ).section( ':', 1, -1 ) );
+	return decodeMimeValue( _de->mimeData() );
 }
-
-

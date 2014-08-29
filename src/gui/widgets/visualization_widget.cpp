@@ -23,8 +23,8 @@
  */
 
 
-#include <QtGui/QMouseEvent>
-#include <QtGui/QPainter>
+#include <QMouseEvent>
+#include <QPainter>
 
 #include "visualization_widget.h"
 #include "gui_templates.h"
@@ -74,12 +74,10 @@ void visualizationWidget::updateAudioBuffer()
 {
 	if( !engine::getSong()->isExporting() )
 	{
-		engine::mixer()->lock();
 		const surroundSampleFrame * c = engine::mixer()->
 							currentReadBuffer();
 		const fpp_t fpp = engine::mixer()->framesPerPeriod();
 		memcpy( m_buffer, c, sizeof( surroundSampleFrame ) * fpp );
-		engine::mixer()->unlock();
 	}
 }
 
@@ -192,6 +190,6 @@ void visualizationWidget::mousePressEvent( QMouseEvent * _me )
 
 
 
-#include "moc_visualization_widget.cxx"
+
 
 

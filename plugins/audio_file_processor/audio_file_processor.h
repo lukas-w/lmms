@@ -27,7 +27,7 @@
 #ifndef AUDIO_FILE_PROCESSOR_H
 #define AUDIO_FILE_PROCESSOR_H
 
-#include <QtGui/QPixmap>
+#include <QPixmap>
 
 #include "Instrument.h"
 #include "InstrumentView.h"
@@ -239,6 +239,7 @@ private:
 	f_cnt_t m_to;
 	f_cnt_t m_last_from;
 	f_cnt_t m_last_to;
+	float m_last_amp;
 	knob * m_startKnob;
 	knob * m_endKnob;
 	knob * m_loopKnob;

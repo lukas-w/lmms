@@ -23,12 +23,12 @@
  */
 
 
-#include <QtGui/QApplication>
-#include <QtGui/QLayout>
-#include <QtGui/QMdiArea>
-#include <QtGui/QProgressDialog>
-#include <QtGui/QScrollBar>
-#include <QtGui/QWheelEvent>
+#include <QApplication>
+#include <QLayout>
+#include <QMdiArea>
+#include <QProgressDialog>
+#include <QScrollBar>
+#include <QWheelEvent>
 
 
 #include "TrackContainerView.h"
@@ -77,6 +77,7 @@ TrackContainerView::TrackContainerView( TrackContainer * _tc ) :
 
 	m_scrollArea->show();
 	m_rubberBand->hide();
+	m_rubberBand->setEnabled( false );
 
 	setAcceptDrops( true );
 
@@ -239,9 +240,7 @@ void TrackContainerView::deleteTrackView( trackView * _tv )
 	removeTrackView( _tv );
 	delete _tv;
 
-	engine::mixer()->lock();
 	delete t;
-	engine::mixer()->unlock();
 }
 
 
@@ -312,7 +311,8 @@ void TrackContainerView::dragEnterEvent( QDragEnterEvent * _dee )
 {
 	stringPairDrag::processDragEnterEvent( _dee,
 		QString( "presetfile,pluginpresetfile,samplefile,instrument,"
-				"importedproject,track_%1,track_%2" ).
+				"importedproject,soundfontfile,vstpluginfile,"
+				"track_%1,track_%2" ).
 						arg( track::InstrumentTrack ).
 						arg( track::SampleTrack ) );
 }
@@ -324,7 +324,6 @@ void TrackContainerView::dropEvent( QDropEvent * _de )
 {
 	QString type = stringPairDrag::decodeKey( _de );
 	QString value = stringPairDrag::decodeValue( _de );
-	engine::mixer()->lock();
 	if( type == "instrument" )
 	{
 		InstrumentTrack * it = dynamic_cast<InstrumentTrack *>(
@@ -334,7 +333,8 @@ void TrackContainerView::dropEvent( QDropEvent * _de )
 		//it->toggledInstrumentTrackButton( true );
 		_de->accept();
 	}
-	else if( type == "samplefile" || type == "pluginpresetfile" )
+	else if( type == "samplefile" || type == "pluginpresetfile" 
+		|| type == "soundfontfile" || type == "vstpluginfile")
 	{
 		InstrumentTrack * it = dynamic_cast<InstrumentTrack *>(
 				track::create( track::InstrumentTrack,
@@ -368,7 +368,6 @@ void TrackContainerView::dropEvent( QDropEvent * _de )
 		track::create( dataFile.content().firstChild().toElement(), m_tc );
 		_de->accept();
 	}
-	engine::mixer()->unlock();
 }
 
 
@@ -379,6 +378,7 @@ void TrackContainerView::mousePressEvent( QMouseEvent * _me )
 	if( allowRubberband() == true )
 	{
 		m_origin = m_scrollArea->mapFromParent( _me->pos() );
+		m_rubberBand->setEnabled( true );
 		m_rubberBand->setGeometry( QRect( m_origin, QSize() ) );
 		m_rubberBand->show();
 	}
@@ -405,6 +405,7 @@ void TrackContainerView::mouseMoveEvent( QMouseEvent * _me )
 void TrackContainerView::mouseReleaseEvent( QMouseEvent * _me )
 {
 	m_rubberBand->hide();
+	m_rubberBand->setEnabled( false );
 	QWidget::mouseReleaseEvent( _me );
 }
 
@@ -457,5 +458,5 @@ void TrackContainerView::scrollArea::wheelEvent( QWheelEvent * _we )
 
 
 
-#include "moc_TrackContainerView.cxx"
+
 

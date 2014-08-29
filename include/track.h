@@ -28,8 +28,9 @@
 
 #include <QtCore/QVector>
 #include <QtCore/QList>
-#include <QtGui/QWidget>
+#include <QWidget>
 #include <QColor>
+#include <QMimeData>
 
 #include "lmms_basics.h"
 #include "MidiTime.h"
@@ -37,6 +38,7 @@
 #include "JournallingObject.h"
 #include "AutomatableModel.h"
 #include "ModelView.h"
+#include "DataFile.h"
 
 
 class QMenu;
@@ -117,11 +119,21 @@ public:
 	{
 		return m_length;
 	}
-
+	
 	virtual void movePosition( const MidiTime & _pos );
 	virtual void changeLength( const MidiTime & _length );
 
 	virtual trackContentObjectView * createView( trackView * _tv ) = 0;
+
+	inline void selectViewOnCreate( bool select )
+	{
+		m_selectViewOnCreate = select;
+	}
+
+	inline bool getSelectViewOnCreate()
+	{
+		return m_selectViewOnCreate;
+	}
 
 
 public slots:
@@ -153,6 +165,7 @@ private:
 	BoolModel m_mutedModel;
 	BoolModel m_soloModel;
 
+	bool m_selectViewOnCreate;
 
 	friend class trackContentObjectView;
 
@@ -210,6 +223,8 @@ protected:
 		return m_trackView;
 	}
 
+	DataFile createTCODataFiles(const QVector<trackContentObjectView *> & tcos) const;
+
 
 protected slots:
 	void updateLength();
@@ -222,7 +237,9 @@ private:
 		NoAction,
 		Move,
 		MoveSelection,
-		Resize
+		Resize,
+		CopySelection,
+		ToggleSelected
 	} ;
 
 	static textFloat * s_textFloat;
@@ -231,7 +248,8 @@ private:
 	trackView * m_trackView;
 	Actions m_action;
 	bool m_autoResize;
-	int m_initialMouseX;
+	QPoint m_initialMousePos;
+	QPoint m_initialMouseGlobalPos;
 
 	textFloat * m_hint;
 
@@ -240,6 +258,15 @@ private:
 // qproperty fields
 	QColor m_fgColor;
 	QColor m_textColor;
+
+	inline void setInitialMousePos( QPoint pos )
+	{
+		m_initialMousePos = pos;
+		m_initialMouseGlobalPos = mapToGlobal( pos );
+	}
+
+	bool mouseMovedDistance( QMouseEvent * _me, int distance );
+
 } ;
 
 
@@ -251,15 +278,8 @@ class trackContentWidget : public QWidget, public JournallingObject
 	Q_OBJECT
 
 	// qproperties for track background gradients
-	Q_PROPERTY( QColor darkerColor1 READ darkerColor1 WRITE setDarkerColor1 )
-	Q_PROPERTY( QColor darkerColor2 READ darkerColor2 WRITE setDarkerColor2 )
-	Q_PROPERTY( QColor darkerColor3 READ darkerColor3 WRITE setDarkerColor3 )
-
-	Q_PROPERTY( QColor lighterColor1 READ lighterColor1 WRITE setLighterColor1 )
-	Q_PROPERTY( QColor lighterColor2 READ lighterColor2 WRITE setLighterColor2 )
-	Q_PROPERTY( QColor lighterColor3 READ lighterColor3 WRITE setLighterColor3 )
-
-	Q_PROPERTY( float gradMidPoint READ gradMidPoint WRITE setGradMidPoint )
+	Q_PROPERTY( QBrush darkerColor READ darkerColor WRITE setDarkerColor )
+	Q_PROPERTY( QBrush lighterColor READ lighterColor WRITE setLighterColor )
 
 public:
 	trackContentWidget( trackView * _parent );
@@ -278,29 +298,18 @@ public:
 		}
 	}
 
+	bool canPasteSelection( MidiTime tcoPos, const QMimeData * mimeData );
+	bool pasteSelection( MidiTime tcoPos, QDropEvent * _de );
+
 	MidiTime endPosition( const MidiTime & _pos_start );
 
 	// qproperty access methods
 
-	QColor darkerColor1() const;
-	QColor darkerColor2() const;
-	QColor darkerColor3() const;
+	QBrush darkerColor() const;
+	QBrush lighterColor() const;
 
-	QColor lighterColor1() const;
-	QColor lighterColor2() const;
-	QColor lighterColor3() const;
-
-	float gradMidPoint() const;
-
-	void setDarkerColor1( const QColor & _c );
-	void setDarkerColor2( const QColor & _c );
-	void setDarkerColor3( const QColor & _c );
-
-	void setLighterColor1( const QColor & _c );
-	void setLighterColor2( const QColor & _c );
-	void setLighterColor3( const QColor & _c );
-
-	void setGradMidPoint( float _g );
+	void setDarkerColor( const QBrush & _c );
+	void setLighterColor( const QBrush & _c );
 
 public slots:
 	void update();
@@ -343,13 +352,8 @@ private:
 	QPixmap m_background;
 
 	// qproperty fields
-	QColor m_darkerColor1;
-	QColor m_darkerColor2;
-	QColor m_darkerColor3;
-	QColor m_lighterColor1;
-	QColor m_lighterColor2;
-	QColor m_lighterColor3;
-	float m_gradMidPoint;
+	QBrush m_darkerColor;
+	QBrush m_lighterColor;
 } ;
 
 
@@ -373,7 +377,9 @@ private slots:
 	void cloneTrack();
 	void removeTrack();
 	void updateMenu();
-
+	void recordingOn();
+	void recordingOff();
+	void clearTrack();
 
 private:
 	static QPixmap * s_grip;
@@ -456,6 +462,7 @@ public:
 	trackContentObject * addTCO( trackContentObject * _tco );
 	void removeTCO( trackContentObject * _tco );
 	// -------------------------------------------------------
+	void deleteTCOs();
 
 	int numOfTCOs();
 	trackContentObject * getTCO( int _tco_num );
@@ -501,6 +508,18 @@ public:
 	  m_height = _height;
 	}
 
+	void lock()
+	{
+		m_processingLock.lock();
+	}
+	void unlock()
+	{
+		m_processingLock.unlock();
+	}
+	bool tryLock()
+	{
+		return m_processingLock.tryLock();
+	}
 
 public slots:
 	virtual void setName( const QString & _new_name )
@@ -526,6 +545,7 @@ private:
 
 	tcoVector m_trackContentObjects;
 
+	QMutex m_processingLock;
 
 	friend class trackView;
 

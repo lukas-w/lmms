@@ -36,7 +36,7 @@ float frnd(float range)
 }
 
 
-#include <QtXml/QDomElement>
+#include <QDomElement>
 
 #include "sfxr.h"
 #include "engine.h"
@@ -454,6 +454,7 @@ void sfxrInstrument::playNote( NotePlayHandle * _n, sampleFrame * _working_buffe
 	float currentSampleRate = engine::mixer()->processingSampleRate();
 
     fpp_t frameNum = _n->framesLeftForCurrentPeriod();
+    const f_cnt_t offset = _n->noteOffset();
 	if ( _n->totalFramesPlayed() == 0 || _n->m_pluginData == NULL )
 	{
 		_n->m_pluginData = new SfxrSynth( this );
@@ -477,7 +478,7 @@ void sfxrInstrument::playNote( NotePlayHandle * _n, sampleFrame * _working_buffe
 	{
 		for( ch_cnt_t j=0; j<DEFAULT_CHANNELS; j++ )
 		{
-			_working_buffer[i][j] = pitchedBuffer[i*pitchedFrameNum/frameNum][j];
+			_working_buffer[i+offset][j] = pitchedBuffer[i*pitchedFrameNum/frameNum][j];
 		}
 	}
 
@@ -485,7 +486,7 @@ void sfxrInstrument::playNote( NotePlayHandle * _n, sampleFrame * _working_buffe
 
 	applyRelease( _working_buffer, _n );
 
-	instrumentTrack()->processAudioBuffer( _working_buffer, frameNum, _n );
+	instrumentTrack()->processAudioBuffer( _working_buffer, frameNum + offset, _n );
 
 }
 
@@ -1125,4 +1126,4 @@ Plugin * PLUGIN_EXPORT lmms_plugin_main( Model*, void* data )
 
 
 
-#include "moc_sfxr.cxx"
+

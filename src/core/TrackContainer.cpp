@@ -24,9 +24,9 @@
  */
 
 
-#include <QtGui/QApplication>
-#include <QtGui/QProgressDialog>
-#include <QtXml/QDomElement>
+#include <QApplication>
+#include <QProgressDialog>
+#include <QDomElement>
 
 #include "TrackContainer.h"
 #include "InstrumentTrack.h"
@@ -160,9 +160,11 @@ void TrackContainer::addTrack( track * _track )
 {
 	if( _track->type() != track::HiddenAutomationTrack )
 	{
+		_track->lock();
 		m_tracksMutex.lockForWrite();
 		m_tracks.push_back( _track );
 		m_tracksMutex.unlock();
+		_track->unlock();
 		emit trackAdded( _track );
 	}
 }
@@ -241,5 +243,5 @@ DummyTrackContainer::DummyTrackContainer() :
 
 
 
-#include "moc_TrackContainer.cxx"
+
 

@@ -337,14 +337,10 @@ const surroundSampleFrame * Mixer::renderNextBuffer()
 	m_inputBufferFrames[ m_inputBufferWrite ] = 0;
 	unlockInputFrames();
 
-
-	// now we have to make sure no other thread does anything bad
-	// while we're acting...
-	lock();
-
 	// remove all play-handles that have to be deleted and delete
 	// them if they still exist...
 	// maybe this algorithm could be optimized...
+	lockPlayHandleRemoval();
 	ConstPlayHandleList::Iterator it_rem = m_playHandlesToRemove.begin();
 	while( it_rem != m_playHandlesToRemove.end() )
 	{
@@ -358,6 +354,11 @@ const surroundSampleFrame * Mixer::renderNextBuffer()
 
 		it_rem = m_playHandlesToRemove.erase( it_rem );
 	}
+	unlockPlayHandleRemoval();
+
+	// now we have to make sure no other thread does anything bad
+	// while we're acting...
+	lock();
 
 	// rotate buffers
 	m_writeBuffer = ( m_writeBuffer + 1 ) % m_poolDepth;
@@ -375,8 +376,14 @@ const surroundSampleFrame * Mixer::renderNextBuffer()
 	// create play-handles for new notes, samples etc.
 	engine::getSong()->processNextBuffer();
 
+	// add all play-handles that have to be added
+	m_playHandleMutex.lock();
+	m_playHandles += m_newPlayHandles;
+	m_newPlayHandles.clear();
+	m_playHandleMutex.unlock();
 
 	// STAGE 1: run and render all play handles
+	lockPlayHandleRemoval();
 	MixerWorkerThread::fillJobQueue<PlayHandleList>( m_playHandles );
 	MixerWorkerThread::startAndWaitForJobs();
 
@@ -400,6 +407,7 @@ const surroundSampleFrame * Mixer::renderNextBuffer()
 			++it;
 		}
 	}
+	unlockPlayHandleRemoval();
 
 
 	// STAGE 2: process effects of all instrument- and sampletracks
@@ -418,6 +426,7 @@ const surroundSampleFrame * Mixer::renderNextBuffer()
 	// and trigger LFOs
 	EnvelopeAndLfoParameters::instances()->trigger();
 	Controller::triggerFrameCounter();
+	AutomatableModel::incrementPeriodCounter();
 
 	const float new_cpu_load = timer.elapsed() / 10000.0f *
 				processingSampleRate() / m_framesPerPeriod;
@@ -451,44 +460,40 @@ void Mixer::clear()
 
 
 
-void Mixer::bufferToPort( const sampleFrame * _buf,
-					const fpp_t _frames,
-					const f_cnt_t _offset,
-					stereoVolumeVector _vv,
-						AudioPort * _port )
+void Mixer::bufferToPort( const sampleFrame * buf,
+					const fpp_t frames,
+					stereoVolumeVector vv,
+						AudioPort * port )
 {
-	const int start_frame = _offset % m_framesPerPeriod;
-	int end_frame = start_frame + _frames;
-	const int loop1_frame = qMin<int>( end_frame, m_framesPerPeriod );
+	const int loop1_frame = qMin<int>( frames, m_framesPerPeriod );
 
-	_port->lockFirstBuffer();
-	MixHelpers::addMultipliedStereo( _port->firstBuffer()+start_frame,	// dst
-										_buf,							// src
-										_vv.vol[0], _vv.vol[1],			// coeff left/right
-										loop1_frame - start_frame );	// frame count
-	_port->unlockFirstBuffer();
+	port->lockFirstBuffer();
+	MixHelpers::addMultipliedStereo( port->firstBuffer(),				// dst
+										buf,							// src
+										vv.vol[0], vv.vol[1],			// coeff left/right
+										loop1_frame );					// frame count
+	port->unlockFirstBuffer();
 
-	_port->lockSecondBuffer();
-	if( end_frame > m_framesPerPeriod )
+	if( frames > m_framesPerPeriod )
 	{
-		const int frames_done = m_framesPerPeriod - start_frame;
-		end_frame -= m_framesPerPeriod;
-		end_frame = qMin<int>( end_frame, m_framesPerPeriod );
+		port->lockSecondBuffer();
+	
+		const fpp_t framesLeft = qMin<int>( frames - m_framesPerPeriod, m_framesPerPeriod );
 
-		MixHelpers::addMultipliedStereo( _port->secondBuffer(),			// dst
-											_buf+frames_done,			// src
-											_vv.vol[0], _vv.vol[1],		// coeff left/right
-											end_frame );				// frame count
+		MixHelpers::addMultipliedStereo( port->secondBuffer(),			// dst
+											buf + m_framesPerPeriod,	// src
+											vv.vol[0], vv.vol[1],		// coeff left/right
+											framesLeft );					// frame count
 
 		// we used both buffers so set flags
-		_port->m_bufferUsage = AudioPort::BothBuffers;
+		port->m_bufferUsage = AudioPort::BothBuffers;
+		port->unlockSecondBuffer();
 	}
-	else if( _port->m_bufferUsage == AudioPort::NoUsage )
+	else if( port->m_bufferUsage == AudioPort::NoUsage )
 	{
 		// only first buffer touched
-		_port->m_bufferUsage = AudioPort::FirstBuffer;
+		port->m_bufferUsage = AudioPort::FirstBuffer;
 	}
-	_port->unlockSecondBuffer();
 }
 
 
@@ -518,14 +523,7 @@ float Mixer::peakValueLeft( sampleFrame * _ab, const f_cnt_t _frames )
 	float p = 0.0f;
 	for( f_cnt_t f = 0; f < _frames; ++f )
 	{
-		if( _ab[f][0] > p )
-		{
-			p = _ab[f][0];
-		}
-		else if( -_ab[f][0] > p )
-		{
-			p = -_ab[f][0];
-		}
+		p = qMax( p, qAbs( _ab[f][0] ) );
 	}
 	return p;
 }
@@ -538,14 +536,7 @@ float Mixer::peakValueRight( sampleFrame * _ab, const f_cnt_t _frames )
 	float p = 0.0f;
 	for( f_cnt_t f = 0; f < _frames; ++f )
 	{
-		if( _ab[f][1] > p )
-		{
-			p = _ab[f][1];
-		}
-		else if( -_ab[f][1] > p )
-		{
-			p = -_ab[f][1];
-		}
+		p = qMax( p, qAbs( _ab[f][1] ) );
 	}
 	return p;
 }
@@ -661,12 +652,12 @@ void Mixer::removeAudioPort( AudioPort * _port )
 
 void Mixer::removePlayHandle( PlayHandle * _ph )
 {
-	lock();
 	// check thread affinity as we must not delete play-handles
 	// which were created in a thread different than mixer thread
 	if( _ph->affinityMatters() &&
 				_ph->affinity() == QThread::currentThread() )
 	{
+		lockPlayHandleRemoval();
 		PlayHandleList::Iterator it =
 				qFind( m_playHandles.begin(),
 						m_playHandles.end(), _ph );
@@ -675,24 +666,24 @@ void Mixer::removePlayHandle( PlayHandle * _ph )
 			m_playHandles.erase( it );
 			delete _ph;
 		}
+		unlockPlayHandleRemoval();
 	}
 	else
 	{
 		m_playHandlesToRemove.push_back( _ph );
 	}
-	unlock();
 }
 
 
 
 
-void Mixer::removePlayHandles( track * _track )
+void Mixer::removePlayHandles( track * _track, bool removeIPHs )
 {
-	lock();
+	lockPlayHandleRemoval();
 	PlayHandleList::Iterator it = m_playHandles.begin();
 	while( it != m_playHandles.end() )
 	{
-		if( ( *it )->isFromTrack( _track ) )
+		if( ( *it )->isFromTrack( _track ) && ( removeIPHs || ( *it )->type() != PlayHandle::TypeInstrumentPlayHandle ) )
 		{
 			delete *it;
 			it = m_playHandles.erase( it );
@@ -702,7 +693,7 @@ void Mixer::removePlayHandles( track * _track )
 			++it;
 		}
 	}
-	unlock();
+	unlockPlayHandleRemoval();
 }
 
 
@@ -960,5 +951,5 @@ void Mixer::fifoWriter::run()
 
 
 
-#include "moc_Mixer.cxx"
+
 

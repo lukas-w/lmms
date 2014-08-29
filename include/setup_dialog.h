@@ -25,7 +25,7 @@
 #ifndef _SETUP_DIALOG_H
 #define _SETUP_DIALOG_H
 
-#include <QtGui/QDialog>
+#include <QDialog>
 #include <QtCore/QMap>
 
 #include "lmmsconfig.h"
@@ -110,6 +110,7 @@ private slots:
 	void toggleAnimateAFP( bool _enabled );
 	void toggleNoteLabels( bool en );
 	void toggleDisplayWaveform( bool en );
+	void toggleDisableAutoquit( bool en );
 
 
 private:
@@ -160,6 +161,7 @@ private:
 	bool m_animateAFP;
 	bool m_printNoteLabels;
 	bool m_displayWaveform;
+	bool m_disableAutoQuit;
 
 	typedef QMap<QString, AudioDevice::setupWidget *> AswMap;
 	typedef QMap<QString, MidiClient::setupWidget *> MswMap;

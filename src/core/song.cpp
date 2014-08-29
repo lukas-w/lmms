@@ -22,10 +22,10 @@
  *
  */
 
-#include <QtCore/QCoreApplication>
-#include <QtCore/QFile>
-#include <QtCore/QFileInfo>
-#include <QtGui/QMessageBox>
+#include <QCoreApplication>
+#include <QFile>
+#include <QFileInfo>
+#include <QMessageBox>
 #include <QApplication>
 
 #include <math.h>
@@ -138,8 +138,8 @@ void song::masterVolumeChanged()
 
 void song::setTempo()
 {
+	engine::mixer()->lockPlayHandleRemoval();
 	const bpm_t tempo = (bpm_t) m_tempoModel.value();
-	engine::mixer()->lock();
 	PlayHandleList & playHandles = engine::mixer()->playHandles();
 	for( PlayHandleList::Iterator it = playHandles.begin();
 						it != playHandles.end(); ++it )
@@ -147,10 +147,12 @@ void song::setTempo()
 		NotePlayHandle * nph = dynamic_cast<NotePlayHandle *>( *it );
 		if( nph && !nph->isReleased() )
 		{
+			nph->lock();
 			nph->resize( tempo );
+			nph->unlock();
 		}
 	}
-	engine::mixer()->unlock();
+	engine::mixer()->unlockPlayHandleRemoval();
 
 	engine::updateFramesPerTick();
 
@@ -523,6 +525,12 @@ void song::setPlayPos( tick_t _ticks, PlayModes _play_mode )
 	m_elapsedMilliSeconds += (((( _ticks - m_playPos[_play_mode].getTicks()))*60*1000/48)/getTempo());
 	m_playPos[_play_mode].setTicks( _ticks );
 	m_playPos[_play_mode].setCurrentFrame( 0.0f );
+
+// send a signal if playposition changes during playback
+	if( isPlaying() ) 
+	{
+		emit playbackPositionChanged();
+	}
 }
 
 
@@ -664,10 +672,8 @@ void song::removeBar()
 
 void song::addBBTrack()
 {
-	engine::mixer()->lock();
 	track * t = track::create( track::BBTrack, this );
 	engine::getBBTrackContainer()->setCurrentBB( dynamic_cast<bbTrack *>( t )->index() );
-	engine::mixer()->unlock();
 }
 
 
@@ -675,9 +681,7 @@ void song::addBBTrack()
 
 void song::addSampleTrack()
 {
-	engine::mixer()->lock();
 	(void) track::create( track::SampleTrack, this );
-	engine::mixer()->unlock();
 }
 
 
@@ -685,9 +689,7 @@ void song::addSampleTrack()
 
 void song::addAutomationTrack()
 {
-	engine::mixer()->lock();
 	(void) track::create( track::AutomationTrack, this );
-	engine::mixer()->unlock();
 }
 
 
@@ -746,6 +748,11 @@ void song::clearProject()
 	if( engine::automationEditor() )
 	{
 		engine::automationEditor()->setCurrentPattern( NULL );
+	}
+
+	if( engine::pianoRoll() )
+	{
+		engine::pianoRoll()->reset();
 	}
 
 	m_tempoModel.reset();
@@ -871,6 +878,8 @@ void song::createNewProjectFromTemplate( const QString & _template )
 // load given song
 void song::loadProject( const QString & _file_name )
 {
+	QDomNode node;
+
 	m_loadingProject = true;
 
 	clearProject();
@@ -888,6 +897,8 @@ void song::loadProject( const QString & _file_name )
 		createNewProject();
 		return;
 	}
+
+	DataFile::LocaleHelper localeHelper( DataFile::LocaleHelper::ModeLoad );
 
 	engine::mixer()->lock();
 
@@ -912,7 +923,19 @@ void song::loadProject( const QString & _file_name )
 	//Backward compatibility for LMMS <= 0.4.15
 	PeakController::initGetControllerBySetting();
 
-	QDomNode node = dataFile.content().firstChild();
+	// Load mixer first to be able to set the correct range for FX channels
+	node = dataFile.content().firstChildElement( engine::fxMixer()->nodeName() );
+	if( !node.isNull() )
+	{
+		engine::fxMixer()->restoreState( node.toElement() );
+		if( engine::hasGUI() )
+		{
+			// refresh FxMixerView
+			engine::fxMixerView()->refreshDisplay();
+		}
+	}
+
+	node = dataFile.content().firstChild();
 	while( !node.isNull() )
 	{
 		if( node.isElement() )
@@ -924,15 +947,6 @@ void song::loadProject( const QString & _file_name )
 			else if( node.nodeName() == "controllers" )
 			{
 				restoreControllerStates( node.toElement() );
-			}
-			else if( node.nodeName() == engine::fxMixer()->nodeName() )
-			{
-				engine::fxMixer()->restoreState( node.toElement() );
-				if( engine::hasGUI() )
-				{
-					// refresh FxMixerView
-					engine::fxMixerView()->refreshDisplay();
-				}
 			}
 			else if( engine::hasGUI() )
 			{
@@ -994,6 +1008,8 @@ void song::loadProject( const QString & _file_name )
 // only save current song as _filename and do nothing else
 bool song::saveProjectFile( const QString & _filename )
 {
+	DataFile::LocaleHelper localeHelper( DataFile::LocaleHelper::ModeSave );
+
 	DataFile dataFile( DataFile::SongProject );
 
 	m_tempoModel.saveSettings( dataFile, dataFile.head(), "bpm" );
@@ -1166,7 +1182,7 @@ void song::exportProject(bool multiExport)
 			types << tr( __fileEncodeDevices[idx].m_description );
 			++idx;
 		}
-		efd.setFilters( types );
+		efd.setNameFilters( types );
 		QString base_filename;
 		if( !m_fileName.isEmpty() )
 		{
@@ -1185,12 +1201,28 @@ void song::exportProject(bool multiExport)
 	efd.setAcceptMode( FileDialog::AcceptSave );
 
 
-	if( efd.exec() == QDialog::Accepted &&
-		!efd.selectedFiles().isEmpty() && !efd.selectedFiles()[0].isEmpty() )
+	if( efd.exec() == QDialog::Accepted && !efd.selectedFiles().isEmpty() && !efd.selectedFiles()[0].isEmpty() )
 	{
-		const QString export_file_name = efd.selectedFiles()[0];
-		exportProjectDialog epd( export_file_name,
-						engine::mainWindow(), multiExport );
+		QString suffix = "";
+		if ( !multiExport )
+		{
+			int stx = efd.selectedNameFilter().indexOf( "(*." );
+			int etx = efd.selectedNameFilter().indexOf( ")" );
+	
+			if ( stx > 0 && etx > stx ) 
+			{
+				// Get first extension from selected dropdown.
+				// i.e. ".wav" from "WAV-File (*.wav), Dummy-File (*.dum)"
+				suffix = efd.selectedNameFilter().mid( stx + 2, etx - stx - 2 ).split( " " )[0].trimmed();
+				if ( efd.selectedFiles()[0].endsWith( suffix ) )
+				{
+					suffix = "";
+				}
+			}
+		}
+
+		const QString export_file_name = efd.selectedFiles()[0] + suffix;
+		exportProjectDialog epd( export_file_name, engine::mainWindow(), multiExport );
 		epd.exec();
 	}
 }
@@ -1250,6 +1282,6 @@ void song::removeController( Controller * _controller )
 }
 
 
-#include "moc_song.cxx"
+
 
 

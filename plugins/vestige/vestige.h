@@ -27,10 +27,10 @@
 #define _VESTIGE_H
 
 
-#include <QtCore/QMutex>
-#include <QtGui/QLayout>
-#include <QtGui/QMdiSubWindow>
-#include <QtGui/QScrollArea>
+#include <QMutex>
+#include <QLayout>
+#include <QMdiSubWindow>
+#include <QScrollArea>
 
 #include "Instrument.h"
 #include "InstrumentView.h"
@@ -68,7 +68,7 @@ public:
 		return IsSingleStreamed | IsMidiBased;
 	}
 
-	virtual bool handleMidiEvent( const MidiEvent& event, const MidiTime& time );
+	virtual bool handleMidiEvent( const MidiEvent& event, const MidiTime& time, f_cnt_t offset = 0 );
 
 	virtual PluginView * instantiateView( QWidget * _parent );
 

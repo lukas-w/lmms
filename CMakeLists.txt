@@ -15,7 +15,7 @@ INCLUDE(FindPkgConfig)
 
 SET(VERSION_MAJOR "1")
 SET(VERSION_MINOR "0")
-SET(VERSION_PATCH "0")
+SET(VERSION_PATCH "93")
 #SET(VERSION_SUFFIX "")
 SET(VERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
 IF(VERSION_SUFFIX)
@@ -42,12 +42,12 @@ OPTION(WANT_TAP		"Include Tom's Audio Processing LADSPA plugins" ON)
 OPTION(WANT_VST		"Include VST support" ON)
 OPTION(WANT_VST_NOWINE	"Include partial VST support (without wine)" OFF)
 OPTION(WANT_WINMM	"Include WinMM MIDI support" OFF)
+OPTION(WANT_QT5		"Build with Qt5" OFF)
 
 
 IF(LMMS_BUILD_APPLE)
         SET(WANT_ALSA OFF)
 	SET(WANT_PULSEAUDIO OFF)
-	SET(WANT_SWH OFF)
 	SET(WANT_VST OFF)
 	SET(STATUS_ALSA "<not supported on this platform>")
 	SET(STATUS_PULSEAUDIO "<not supported on this platform>")
@@ -98,8 +98,20 @@ CHECK_INCLUDE_FILES(locale.h LMMS_HAVE_LOCALE_H)
 
 LIST(APPEND CMAKE_PREFIX_PATH "${CMAKE_INSTALL_PREFIX}")
 
+IF(WANT_QT5)
+	SET(QT5 TRUE)
+
+	FIND_PACKAGE(Qt5Core REQUIRED)
+	FIND_PACKAGE(Qt5Gui REQUIRED)
+	FIND_PACKAGE(Qt5Widgets REQUIRED)
+	FIND_PACKAGE(Qt5Xml REQUIRED)
+
+
+ELSE()
+	SET(QT5 FALSE)
+
 # check for Qt4
-SET(QT_MIN_VERSION "4.3.0" COMPONENTS QtCore QtGui QtXml)
+SET(QT_MIN_VERSION "4.6.0" COMPONENTS QtCore QtGui QtXml)
 FIND_PACKAGE(Qt4 REQUIRED)
 SET(QT_USE_QTXML 1)
 EXEC_PROGRAM(${QT_QMAKE_EXECUTABLE} ARGS "-query QT_INSTALL_TRANSLATIONS" OUTPUT_VARIABLE QT_TRANSLATIONS_DIR)
@@ -114,6 +126,7 @@ IF(NOT WIN32)
 	STRING(REPLACE "-DQT_DLL" "" QT_DEFINITIONS "${QT_DEFINITIONS}")
 ENDIF(NOT WIN32)
 INCLUDE("${QT_USE_FILE}")
+ENDIF()
 
 # check for libsndfile
 PKG_CHECK_MODULES(SNDFILE REQUIRED sndfile>=1.0.11)
@@ -165,7 +178,7 @@ IF(WANT_SDL)
 		SET(LMMS_HAVE_SDL TRUE)
 		SET(STATUS_SDL "OK")
 	ELSE(SDL_FOUND)
-		SET(STATUS_SDL "not found, please install libsdl1.2-dev (or similiar) "
+		SET(STATUS_SDL "not found, please install libsdl1.2-dev (or similar) "
 			"if you require SDL support")
 	ENDIF(SDL_FOUND)
 ENDIF(WANT_SDL)
@@ -186,7 +199,7 @@ IF(WANT_STK)
 		SET(STATUS_STK "OK")
 	ELSE(STK_FOUND)
 		SET(STK_INCLUDE_DIR "")
-		SET(STATUS_STK "not found, please install libstk0-dev (or similiar) "
+		SET(STATUS_STK "not found, please install libstk0-dev (or similar) "
 			"if you require the Mallets instrument")
 	ENDIF(STK_FOUND)
 ENDIF(WANT_STK)
@@ -199,7 +212,7 @@ IF(WANT_PORTAUDIO)
 		SET(LMMS_HAVE_PORTAUDIO TRUE)
 		SET(STATUS_PORTAUDIO "OK")
 	ELSE(PORTAUDIO_FOUND)
-		SET(STATUS_PORTAUDIO "not found, please install portaudio19-dev (or similiar, version >= 1.9) "
+		SET(STATUS_PORTAUDIO "not found, please install portaudio19-dev (or similar, version >= 1.9) "
 			"if you require PortAudio support")
 	ENDIF(PORTAUDIO_FOUND)
 ENDIF(WANT_PORTAUDIO)
@@ -212,7 +225,7 @@ IF(WANT_PULSEAUDIO)
 		SET(LMMS_HAVE_PULSEAUDIO TRUE)
 		SET(STATUS_PULSEAUDIO "OK")
 	ELSE(PULSEAUDIO_FOUND)
-		SET(STATUS_PULSEAUDIO "not found, please install libpulse-dev (or similiar) "
+		SET(STATUS_PULSEAUDIO "not found, please install libpulse-dev (or similar) "
 			"if you require PulseAudio support")
 	ENDIF(PULSEAUDIO_FOUND)
 ENDIF(WANT_PULSEAUDIO)
@@ -229,7 +242,7 @@ IF(WANT_OGGVORBIS)
 		SET(LMMS_HAVE_OGGVORBIS TRUE)
 		SET(STATUS_OGGVORBIS "OK")
 	ELSE(OGGVORBIS_FOUND)
-		SET(STATUS_OGGVORBIS "not found, libogg-dev and libvorbis-dev (or similiar) "
+		SET(STATUS_OGGVORBIS "not found, libogg-dev and libvorbis-dev (or similar) "
 			"is highly recommended")
 	ENDIF(OGGVORBIS_FOUND)
 ENDIF(WANT_OGGVORBIS)
@@ -251,7 +264,7 @@ IF(WANT_ALSA)
 		SET(LMMS_HAVE_ALSA TRUE)
 		SET(STATUS_ALSA "OK")
 	ELSE(ALSA_FOUND)
-		SET(STATUS_ALSA "not found, please install libasound2-dev (or similiar) "
+		SET(STATUS_ALSA "not found, please install libasound2-dev (or similar) "
 			"if you require ALSA support")
 	ENDIF(ALSA_FOUND)
 ENDIF(WANT_ALSA)
@@ -267,7 +280,7 @@ IF(WANT_JACK)
 		SET(LMMS_HAVE_JACK TRUE)
 		SET(STATUS_JACK "OK")
 	ELSE(JACK_FOUND)
-		SET(STATUS_JACK "not found, please install libjack0.100.0-dev (or similiar) "
+		SET(STATUS_JACK "not found, please install libjack0.100.0-dev (or similar) "
 			"if you require JACK support")
 	ENDIF(JACK_FOUND)
 ENDIF(WANT_JACK)
@@ -284,7 +297,7 @@ IF(WANT_SF2)
 		SET(LMMS_HAVE_FLUIDSYNTH TRUE)
 		SET(STATUS_FLUIDSYNTH "OK")
 	ELSE(FLUIDSYNTH_FOUND)
-		SET(STATUS_FLUIDSYNTH "not found, libfluidsynth-dev (or similiar)"
+		SET(STATUS_FLUIDSYNTH "not found, libfluidsynth-dev (or similar)"
 			"is highly recommended")
 	ENDIF(FLUIDSYNTH_FOUND)
 ENDIF(WANT_SF2)
@@ -301,7 +314,7 @@ IF(WANT_VST)
 		SET(LMMS_SUPPORT_VST TRUE)
 		SET(STATUS_VST "OK")
 	ELSE(WINE_FOUND)
-		SET(STATUS_VST "not found, please install (lib)wine-dev (or similiar) - 64 bit systems additionally need gcc-multilib and g++-multilib")
+		SET(STATUS_VST "not found, please install (lib)wine-dev (or similar) - 64 bit systems additionally need gcc-multilib and g++-multilib")
 	ENDIF(WINE_FOUND)
 ENDIF(WANT_VST)
 IF(LMMS_BUILD_WIN32)
@@ -323,6 +336,11 @@ CONFIGURE_FILE("${CMAKE_SOURCE_DIR}/plugins/zynaddsubfx/zynaddsubfx.rc.in" "${CM
 SET(WERROR_FLAGS "-Wall -Werror=unused-function -Wno-sign-compare -Wno-strict-overflow")
 IF(NOT LMMS_BUILD_APPLE)
    SET(WERROR_FLAGS "${WERROR_FLAGS} -Werror")
+ENDIF()
+
+# Due to a regression in gcc-4.8.X, we need to disable array-bounds check
+IF (CMAKE_COMPILER_IS_GNUCXX AND ((CMAKE_CXX_COMPILER_VERSION VERSION_EQUAL "4.8.0") OR (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER "4.8.0")))
+   SET(WERROR_FLAGS "${WERROR_FLAGS} -Wno-array-bounds")
 ENDIF()
 
 SET(CMAKE_C_FLAGS "-O2 -g ${WERROR_FLAGS} ${CMAKE_C_FLAGS}")
@@ -353,9 +371,13 @@ ENDIF(GIT_FOUND)
 
 SET(lmms_EMBEDDED_RESOURCES "${CMAKE_SOURCE_DIR}/AUTHORS" "${CMAKE_SOURCE_DIR}/COPYING" "${CONTRIBUTORS}")
 
-QT4_WRAP_CPP(lmms_MOC_out ${lmms_MOC} OPTIONS -nw)
+IF(QT5)
+QT5_WRAP_CPP(lmms_MOC_out ${lmms_MOC} OPTIONS -nw -I${CMAKE_BINARY_DIR})
+QT5_WRAP_UI(lmms_UI_out ${lmms_UI})
+ELSE()
+QT4_WRAP_CPP(lmms_MOC_out ${lmms_MOC} OPTIONS -nw -I${CMAKE_BINARY_DIR})
 QT4_WRAP_UI(lmms_UI_out ${lmms_UI})
-
+ENDIF()
 
 # embedded resources stuff
 IF(WIN32 OR WIN64)
@@ -371,7 +393,7 @@ ENDIF(WIN32 OR WIN64)
 SET(LMMS_ER_H "${CMAKE_CURRENT_BINARY_DIR}/embedded_resources.h")
 
 # we somehow have to make LMMS-binary depend on MOC-files
-ADD_FILE_DEPENDENCIES("${CMAKE_BINARY_DIR}/lmmsconfig.h" ${lmms_MOC_out})
+ADD_FILE_DEPENDENCIES("${CMAKE_BINARY_DIR}/lmmsconfig.h")
 
 ADD_CUSTOM_COMMAND(OUTPUT "${LMMS_ER_H}" COMMAND "${BIN2RES}" ARGS ${lmms_EMBEDDED_RESOURCES} > "\"${LMMS_ER_H}\"" DEPENDS "${BIN2RES}")
 
@@ -388,6 +410,18 @@ ELSE(WIN32)
 	SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -DPIC")
 ENDIF(WIN32)
 
+# set up apple vars before traversing into data/scripts
+SET(MACOSX_BUNDLE_ICON_FILE "lmms.icns")
+SET(MACOSX_BUNDLE_GUI_IDENTIFIER "LMMS")
+SET(MACOSX_BUNDLE_LONG_VERSION_STRING "${VERSION}")
+SET(MACOSX_BUNDLE_BUNDLE_NAME "LMMS")
+SET(MACOSX_BUNDLE_SHORT_VERSION_STRING "${VERSION}")
+SET(MACOSX_BUNDLE_BUNDLE_VERSION "${VERSION}")
+SET(MACOSX_BUNDLE_COPYRIGHT "Tobias Doerffel, 2008-2010")
+SET(MACOSX_BUNDLE_MIMETYPE "application/x-lmms-project")
+SET(MACOSX_BUNDLE_MIMETYPE_ICON "project.icns")
+SET(MACOSX_BUNDLE_MIMETYPE_ID "net.sourceforge.lmms")
+SET(MACOSX_BUNDLE_PROJECT_URL "http://lmms.sourceforge.net")
 
 
 # make sub-directories
@@ -432,9 +466,13 @@ IF(NOT ("${OGGVORBIS_INCLUDE_DIR}" STREQUAL ""))
 ENDIF()
 
 ADD_CUSTOM_COMMAND(OUTPUT "${CMAKE_BINARY_DIR}/lmms.1.gz" COMMAND gzip -c "\"${CMAKE_SOURCE_DIR}/lmms.1\"" > "\"${CMAKE_BINARY_DIR}/lmms.1.gz\"" DEPENDS "${CMAKE_SOURCE_DIR}/lmms.1" COMMENT "Generating lmms.1.gz")
-ADD_EXECUTABLE(lmms ${lmms_SOURCES} ${lmms_INCLUDES} "${LMMS_ER_H}" ${lmms_UI_out} lmmsconfig.h lmmsversion.h "${WINRC}" "${CMAKE_BINARY_DIR}/lmms.1.gz")
+ADD_EXECUTABLE(lmms ${lmms_SOURCES} ${lmms_INCLUDES} ${lmms_MOC_out} "${LMMS_ER_H}" ${lmms_UI_out} lmmsconfig.h lmmsversion.h "${WINRC}" "${CMAKE_BINARY_DIR}/lmms.1.gz")
 
 TARGET_LINK_LIBRARIES(lmms ${CMAKE_THREAD_LIBS_INIT} ${QT_LIBRARIES} ${ASOUND_LIBRARY} ${SDL_LIBRARY} ${PORTAUDIO_LIBRARIES} ${PULSEAUDIO_LIBRARIES} ${JACK_LIBRARIES} ${OGGVORBIS_LIBRARIES} ${SAMPLERATE_LIBRARIES} ${SNDFILE_LIBRARIES} ${EXTRA_LIBRARIES})
+
+IF(QT5)
+	TARGET_LINK_LIBRARIES(lmms Qt5::Widgets Qt5::Xml)
+ENDIF()
 
 IF(LMMS_BUILD_WIN32)
 
@@ -445,13 +483,16 @@ IF(LMMS_BUILD_WIN32)
 	INSTALL(FILES
 					"${MINGW_PREFIX}/bin/QtCore4.dll"
 					"${MINGW_PREFIX}/bin/QtGui4.dll"
+					"${MINGW_PREFIX}/bin/QtSvg4.dll"
 					"${MINGW_PREFIX}/bin/QtXml4.dll"
 					"${MINGW_PREFIX}/bin/libsamplerate-0.dll"
 					"${MINGW_PREFIX}/bin/libsndfile-1.dll"
 					"${MINGW_PREFIX}/bin/libvorbis-0.dll"
 					"${MINGW_PREFIX}/bin/libvorbisenc-2.dll"
 					"${MINGW_PREFIX}/bin/libvorbisfile-3.dll"
+					"${MINGW_PREFIX}/bin/libjpeg-9.dll"
 					"${MINGW_PREFIX}/bin/libogg-0.dll"
+					"${MINGW_PREFIX}/lib/libfltk.dll"
 					"${MINGW_PREFIX}/bin/libfluidsynth.dll"
 					"${MINGW_PREFIX}/bin/libfftw3f-3.dll"
 					"${MINGW_PREFIX}/bin/libFLAC-8.dll"
@@ -461,6 +502,7 @@ IF(LMMS_BUILD_WIN32)
 					"${MINGW_PREFIX}/bin/libglib-2.0-0.dll"
 					"${MINGW_PREFIX}/bin/libgthread-2.0-0.dll"
 					"${MINGW_PREFIX}/bin/zlib1.dll"
+					"${MINGW_PREFIX}/${CMAKE_SYSTEM_PROCESSOR}-w64-mingw32/bin/libwinpthread-1.dll"
 				DESTINATION .)
 
 ELSE(LMMS_BUILD_WIN32)
@@ -644,6 +686,8 @@ SET(CPACK_NSIS_EXTRA_INSTALL_COMMANDS "
 SET(CPACK_NSIS_EXTRA_UNINSTALL_COMMANDS "
   \\\${unregisterExtension} \\\".mmp\\\" \\\"LMMS Project\\\"
   \\\${unregisterExtension} \\\".mmpz\\\" \\\"LMMS Project (compressed)\\\"
+  DeleteRegKey HKCR \\\"LMMS Project\\\"
+  DeleteRegKey HKCR \\\"LMMS Project (compressed)\\\"
   ")
 ELSE(WIN32)
 SET(CPACK_STRIP_FILES "bin/lmms;${PLUGIN_DIR}/*.so")
@@ -655,14 +699,6 @@ IF(WIN64)
 	SET(CPACK_NSIS_DEFINES "${CPACK_NSIS_DEFINES}
 		InstallDir \\\"\\\$PROGRAMFILES64\\\\${CPACK_PACKAGE_INSTALL_DIRECTORY}\\\"")
 ENDIF(WIN64)
-
-SET(MACOSX_BUNDLE_ICON_FILE "${CMAKE_SOURCE_DIR}/data/themes/default/icon.png")
-SET(MACOSX_BUNDLE_GUI_IDENTIFIER "LMMS")
-SET(MACOSX_BUNDLE_LONG_VERSION_STRING "${VERSION}")
-SET(MACOSX_BUNDLE_BUNDLE_NAME "LMMS")
-SET(MACOSX_BUNDLE_SHORT_VERSION_STRING "${VERSION}")
-SET(MACOSX_BUNDLE_BUNDLE_VERSION "${VERSION}")
-SET(MACOSX_BUNDLE_COPYRIGHT "Tobias Doerffel, 2008-2010")
 
 SET(CPACK_SOURCE_GENERATOR "TBZ2")
 SET(CPACK_SOURCE_PACKAGE_FILE_NAME "lmms-${VERSION}")

@@ -22,7 +22,7 @@
  *
  */
 
-#include <QtXml/QDomElement>
+#include <QDomElement>
 
 #include "Watsyn.h"
 #include "engine.h"
@@ -153,8 +153,8 @@ void WatsynObject::renderOutput( fpp_t _frames )
 		const float xt = m_parent->m_xtalk.value();
 		if( xt > 0.0 )
 		{
-			B2_L += ( A1_L * xt ) / 100.0f;
-			B2_R += ( A1_R * xt ) / 100.0f;
+			B2_L += ( A1_L * xt ) * 0.01f;
+			B2_R += ( A1_R * xt ) * 0.01f;
 		}
 
 		// if phase mod, add to phases
@@ -283,25 +283,25 @@ WatsynInstrument::WatsynInstrument( InstrumentTrack * _instrument_track ) :
 	connect( &b1_pan, SIGNAL( dataChanged() ), this, SLOT( updateVolumes() ) );
 	connect( &b2_pan, SIGNAL( dataChanged() ), this, SLOT( updateVolumes() ) );
 
-	connect( &a1_mult, SIGNAL( dataChanged() ), this, SLOT( updateFreq() ) );
-	connect( &a2_mult, SIGNAL( dataChanged() ), this, SLOT( updateFreq() ) );
-	connect( &b1_mult, SIGNAL( dataChanged() ), this, SLOT( updateFreq() ) );
-	connect( &b2_mult, SIGNAL( dataChanged() ), this, SLOT( updateFreq() ) );
+	connect( &a1_mult, SIGNAL( dataChanged() ), this, SLOT( updateFreqA1() ) );
+	connect( &a2_mult, SIGNAL( dataChanged() ), this, SLOT( updateFreqA2() ) );
+	connect( &b1_mult, SIGNAL( dataChanged() ), this, SLOT( updateFreqB1() ) );
+	connect( &b2_mult, SIGNAL( dataChanged() ), this, SLOT( updateFreqB2() ) );
 
-	connect( &a1_ltune, SIGNAL( dataChanged() ), this, SLOT( updateFreq() ) );
-	connect( &a2_ltune, SIGNAL( dataChanged() ), this, SLOT( updateFreq() ) );
-	connect( &b1_ltune, SIGNAL( dataChanged() ), this, SLOT( updateFreq() ) );
-	connect( &b2_ltune, SIGNAL( dataChanged() ), this, SLOT( updateFreq() ) );
+	connect( &a1_ltune, SIGNAL( dataChanged() ), this, SLOT( updateFreqA1() ) );
+	connect( &a2_ltune, SIGNAL( dataChanged() ), this, SLOT( updateFreqA2() ) );
+	connect( &b1_ltune, SIGNAL( dataChanged() ), this, SLOT( updateFreqB1() ) );
+	connect( &b2_ltune, SIGNAL( dataChanged() ), this, SLOT( updateFreqB2() ) );
 
-	connect( &a1_rtune, SIGNAL( dataChanged() ), this, SLOT( updateFreq() ) );
-	connect( &a2_rtune, SIGNAL( dataChanged() ), this, SLOT( updateFreq() ) );
-	connect( &b1_rtune, SIGNAL( dataChanged() ), this, SLOT( updateFreq() ) );
-	connect( &b2_rtune, SIGNAL( dataChanged() ), this, SLOT( updateFreq() ) );
+	connect( &a1_rtune, SIGNAL( dataChanged() ), this, SLOT( updateFreqA1() ) );
+	connect( &a2_rtune, SIGNAL( dataChanged() ), this, SLOT( updateFreqA2() ) );
+	connect( &b1_rtune, SIGNAL( dataChanged() ), this, SLOT( updateFreqB1() ) );
+	connect( &b2_rtune, SIGNAL( dataChanged() ), this, SLOT( updateFreqB2() ) );
 	
-	connect( &a1_graph, SIGNAL( samplesChanged( int, int ) ), this, SLOT( updateWaves() ) );
-	connect( &a2_graph, SIGNAL( samplesChanged( int, int ) ), this, SLOT( updateWaves() ) );
-	connect( &b1_graph, SIGNAL( samplesChanged( int, int ) ), this, SLOT( updateWaves() ) );
-	connect( &b2_graph, SIGNAL( samplesChanged( int, int ) ), this, SLOT( updateWaves() ) );
+	connect( &a1_graph, SIGNAL( samplesChanged( int, int ) ), this, SLOT( updateWaveA1() ) );
+	connect( &a2_graph, SIGNAL( samplesChanged( int, int ) ), this, SLOT( updateWaveA2() ) );
+	connect( &b1_graph, SIGNAL( samplesChanged( int, int ) ), this, SLOT( updateWaveB1() ) );
+	connect( &b2_graph, SIGNAL( samplesChanged( int, int ) ), this, SLOT( updateWaveB2() ) );
 
 	a1_graph.setWaveToSine();
 	a2_graph.setWaveToSine();
@@ -309,8 +309,14 @@ WatsynInstrument::WatsynInstrument( InstrumentTrack * _instrument_track ) :
 	b2_graph.setWaveToSine();
 
 	updateVolumes();
-	updateFreq();
-	updateWaves();
+	updateFreqA1();
+	updateFreqA2();
+	updateFreqB1();
+	updateFreqB2();
+	updateWaveA1();
+	updateWaveA2();
+	updateWaveB1();
+	updateWaveB2();
 }
 
 
@@ -337,6 +343,8 @@ void WatsynInstrument::playNote( NotePlayHandle * _n,
 	}
 
 	const fpp_t frames = _n->framesLeftForCurrentPeriod();
+	const f_cnt_t offset = _n->noteOffset();
+	sampleFrame * buffer = _working_buffer + offset;
 
 	WatsynObject * w = static_cast<WatsynObject *>( _n->m_pluginData );
 
@@ -354,7 +362,8 @@ void WatsynInstrument::playNote( NotePlayHandle * _n,
 	const float tfp_ = static_cast<float>( _n->totalFramesPlayed() );
 
 	// if sample-exact is enabled, use sample-exact calculations...
-	if( engine::mixer()->currentQualitySettings().sampleExactControllers )
+	// disabled pending proper implementation of sample-exactness
+/*	if( engine::mixer()->currentQualitySettings().sampleExactControllers )
 	{
 		for( fpp_t f=0; f < frames; f++ )
 		{
@@ -387,10 +396,11 @@ void WatsynInstrument::playNote( NotePlayHandle * _n,
 									( bbuf[f][1] * bmix );
 		}
 	}
-
+	else*/ 
+	
 	// if sample-exact is not enabled, use simpler calculations:
 	// if mix envelope is active, and we haven't gone past the envelope end, use envelope-aware calculation...
-	else if( envAmt != 0.0f && tfp_ < envLen )
+	if( envAmt != 0.0f && tfp_ < envLen )
 	{
 		const float mixvalue_ = m_abmix.value();
 		for( fpp_t f=0; f < frames; f++ )
@@ -416,9 +426,9 @@ void WatsynInstrument::playNote( NotePlayHandle * _n,
 			const float amix = 1.0 - bmix;
 
 			// mix a/b streams according to mixing knob
-			_working_buffer[f][0] = ( abuf[f][0] * amix ) +
+			buffer[f][0] = ( abuf[f][0] * amix ) +
 									( bbuf[f][0] * bmix );
-			_working_buffer[f][1] = ( abuf[f][1] * amix ) +
+			buffer[f][1] = ( abuf[f][1] * amix ) +
 									( bbuf[f][1] * bmix );
 		}
 	}
@@ -432,16 +442,16 @@ void WatsynInstrument::playNote( NotePlayHandle * _n,
 		for( fpp_t f=0; f < frames; f++ )
 		{
 			// mix a/b streams according to mixing knob
-			_working_buffer[f][0] = ( abuf[f][0] * amix ) +
+			buffer[f][0] = ( abuf[f][0] * amix ) +
 									( bbuf[f][0] * bmix );
-			_working_buffer[f][1] = ( abuf[f][1] * amix ) +
+			buffer[f][1] = ( abuf[f][1] * amix ) +
 									( bbuf[f][1] * bmix );
 		}
 	}
 
 	applyRelease( _working_buffer, _n );
 
-	instrumentTrack()->processAudioBuffer( _working_buffer, frames, _n );
+	instrumentTrack()->processAudioBuffer( _working_buffer, frames + offset, _n );
 }
 
 
@@ -589,31 +599,67 @@ void WatsynInstrument::updateVolumes()
 	m_rvol[B2_OSC] = rightCh( b2_vol.value(), b2_pan.value() );
 }
 
-void WatsynInstrument::updateFreq()
+
+void WatsynInstrument::updateFreqA1()
 {
 	// calculate frequencies
 	m_lfreq[A1_OSC] = ( a1_mult.value() / 8 ) * powf( 2, a1_ltune.value() / 1200 );
 	m_rfreq[A1_OSC] = ( a1_mult.value() / 8 ) * powf( 2, a1_rtune.value() / 1200 );
-	
+}
+
+
+void WatsynInstrument::updateFreqA2()
+{
+	// calculate frequencies
 	m_lfreq[A2_OSC] = ( a2_mult.value() / 8 ) * powf( 2, a2_ltune.value() / 1200 );
 	m_rfreq[A2_OSC] = ( a2_mult.value() / 8 ) * powf( 2, a2_rtune.value() / 1200 );
+}
 
+
+void WatsynInstrument::updateFreqB1()
+{
+	// calculate frequencies
 	m_lfreq[B1_OSC] = ( b1_mult.value() / 8 ) * powf( 2, b1_ltune.value() / 1200 );
 	m_rfreq[B1_OSC] = ( b1_mult.value() / 8 ) * powf( 2, b1_rtune.value() / 1200 );
+}
 
+
+void WatsynInstrument::updateFreqB2()
+{
+	// calculate frequencies
 	m_lfreq[B2_OSC] = ( b2_mult.value() / 8 ) * powf( 2, b2_ltune.value() / 1200 );
 	m_rfreq[B2_OSC] = ( b2_mult.value() / 8 ) * powf( 2, b2_rtune.value() / 1200 );	
 }
 
 
-void WatsynInstrument::updateWaves()
+void WatsynInstrument::updateWaveA1()
 {
-	// do cip+oversampling on the wavetables to improve quality
+	// do sinc+oversampling on the wavetables to improve quality
 	srccpy( &A1_wave[0], const_cast<float*>( a1_graph.samples() ) );
+}
+
+
+void WatsynInstrument::updateWaveA2()
+{
+	// do sinc+oversampling on the wavetables to improve quality
 	srccpy( &A2_wave[0], const_cast<float*>( a2_graph.samples() ) );
+}
+
+
+void WatsynInstrument::updateWaveB1()
+{
+	// do sinc+oversampling on the wavetables to improve quality
 	srccpy( &B1_wave[0], const_cast<float*>( b1_graph.samples() ) );
+}
+
+
+void WatsynInstrument::updateWaveB2()
+{
+	// do sinc+oversampling on the wavetables to improve quality
 	srccpy( &B2_wave[0], const_cast<float*>( b2_graph.samples() ) );
 }
+
+
 
 
 WatsynView::WatsynView( Instrument * _instrument,
@@ -1237,4 +1283,4 @@ Plugin * PLUGIN_EXPORT lmms_plugin_main( Model *, void * _data )
 }
 
 
-#include "moc_Watsyn.cxx"
+

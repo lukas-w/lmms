@@ -24,16 +24,12 @@
 
 #include "lmmsconfig.h"
 
-#ifndef LMMS_BUILD_APPLE
-#include <Qt/QtXml>
-#endif
-#ifdef LMMS_BUILD_APPLE 
-#include <QtXml>
-#endif
-#include <QtCore/QTemporaryFile>
-#include <QtGui/QDropEvent>
-#include <QtGui/QGridLayout>
-#include <QtGui/QPushButton>
+#include <QDir>
+#include <QDomDocument>
+#include <QTemporaryFile>
+#include <QDropEvent>
+#include <QGridLayout>
+#include <QPushButton>
 
 #include "ZynAddSubFx.h"
 #include "engine.h"
@@ -49,7 +45,7 @@
 #include "ControllerConnection.h"
 
 #include "embed.cpp"
-#include "moc_ZynAddSubFx.cxx"
+
 
 
 extern "C"
@@ -343,7 +339,7 @@ void ZynAddSubFxInstrument::play( sampleFrame * _buf )
 
 
 
-bool ZynAddSubFxInstrument::handleMidiEvent( const MidiEvent& event, const MidiTime& time )
+bool ZynAddSubFxInstrument::handleMidiEvent( const MidiEvent& event, const MidiTime& time, f_cnt_t offset )
 {
 	// do not forward external MIDI Control Change events if the according
 	// LED is not checked

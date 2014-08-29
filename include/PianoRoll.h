@@ -27,14 +27,15 @@
 #ifndef PIANO_ROLL_H
 #define PIANO_ROLL_H
 
-#include <QtGui/QWidget>
+#include <QWidget>
+#include <QInputDialog>
 
 #include "ComboBoxModel.h"
 #include "SerializingObject.h"
 #include "note.h"
 #include "lmms_basics.h"
 #include "song.h"
-
+#include "tooltip.h"
 
 class QPainter;
 class QPixmap;
@@ -52,7 +53,14 @@ class toolButton;
 class PianoRoll : public QWidget, public SerializingObject
 {
 	Q_OBJECT
+	Q_PROPERTY( QColor gridColor READ gridColor WRITE setGridColor )
+	Q_PROPERTY( QColor noteModeColor READ noteModeColor WRITE setNoteModeColor )
+	Q_PROPERTY( QColor noteColor READ noteColor WRITE setNoteColor )
+	Q_PROPERTY( QColor barColor READ barColor WRITE setBarColor )
 public:
+	/*! \brief Resets settings to default when e.g. creating a new project */
+	void reset();
+
 	void setCurrentPattern( pattern * _new_pattern );
 
 	inline void stopRecording()
@@ -89,7 +97,16 @@ public:
 	}
 
 	void setPauseIcon( bool pause );
-
+	
+	// qproperty acces functions
+	QColor gridColor() const;
+	void setGridColor( const QColor & _c );
+	QColor noteModeColor() const;
+	void setNoteModeColor( const QColor & _c );
+	QColor noteColor() const;
+	void setNoteColor( const QColor & _c );
+	QColor barColor() const;
+	void setBarColor( const QColor & _c );
 
 protected:
 	virtual void closeEvent( QCloseEvent * _ce );
@@ -106,11 +123,13 @@ protected:
 
 	int getKey( int _y ) const;
 	static inline void drawNoteRect( QPainter & _p, int _x, int _y,
-					int  _width, note * _n );
+					int  _width, note * _n, const QColor & noteCol );
 	void removeSelection();
 	void selectAll();
 	void getSelectedNotes( NoteVector & _selected_notes );
 
+	// for entering values with dblclick in the vol/pan bars
+	void enterValue( NoteVector* nv );
 
 protected slots:
 	void play();
@@ -144,7 +163,6 @@ protected slots:
 
 	void changeNoteEditMode( int i );
 	void markSemiTone( int i );
-
 
 signals:
 	void currentPatternChanged();
@@ -241,6 +259,7 @@ private:
 
 	static PianoRollKeyTypes prKeyOrder[];
 
+	static textFloat * s_textFloat;
 
 	QWidget * m_toolBar;
 
@@ -341,8 +360,16 @@ private:
 	void computeSelectedNotes( bool shift );
 	void clearSelectedNotes();
 
+	// did we start a mouseclick with shift pressed
+	bool m_startedWithShift;
+
 	friend class engine;
 
+	// qproperty fields
+	QColor m_gridColor;
+	QColor m_noteModeColor;
+	QColor m_noteColor;
+	QColor m_barColor;
 
 signals:
 	void positionChanged( const MidiTime & );

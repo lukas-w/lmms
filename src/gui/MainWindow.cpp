@@ -23,17 +23,17 @@
  */
 
 
-#include <QtXml/QDomElement>
-#include <QtCore/QUrl>
-#include <QtGui/QApplication>
-#include <QtGui/QCloseEvent>
-#include <QtGui/QDesktopServices>
-#include <QtGui/QMdiArea>
-#include <QtGui/QMdiSubWindow>
-#include <QtGui/QMenuBar>
-#include <QtGui/QMessageBox>
-#include <QtGui/QSplitter>
-#include <QtGui/QWhatsThis>
+#include <QDomElement>
+#include <QUrl>
+#include <QApplication>
+#include <QCloseEvent>
+#include <QDesktopServices>
+#include <QMdiArea>
+#include <QMdiSubWindow>
+#include <QMenuBar>
+#include <QMessageBox>
+#include <QSplitter>
+#include <QWhatsThis>
 
 #include "lmmsversion.h"
 #include "MainWindow.h"
@@ -91,7 +91,7 @@ MainWindow::MainWindow() :
 	SideBar * sideBar = new SideBar( Qt::Vertical, w );
 
 	QSplitter * splitter = new QSplitter( Qt::Horizontal, w );
-	splitter->setChildrenCollapsible( FALSE );
+	splitter->setChildrenCollapsible( false );
 
 	QString wdir = configManager::inst()->workingDir();
 	sideBar->appendTab( new pluginBrowser( splitter ) );
@@ -236,7 +236,7 @@ void MainWindow::finalize()
 
 	m_recentlyOpenedProjectsMenu = project_menu->addMenu(
 				embed::getIconPixmap( "project_open_recent" ),
-					tr( "Recently opened projects" ) );
+					tr( "&Recently opened projects" ) );
 	connect( m_recentlyOpenedProjectsMenu, SIGNAL( aboutToShow() ),
 			this, SLOT( updateRecentlyOpenedProjectsMenu() ) );
 	connect( m_recentlyOpenedProjectsMenu, SIGNAL( triggered( QAction * ) ),
@@ -286,7 +286,7 @@ void MainWindow::finalize()
 	edit_menu->addAction( embed::getIconPixmap( "edit_redo" ),
 					tr( "Redo" ),
 					this, SLOT( redo() ),
-					Qt::CTRL + Qt::Key_R );
+					Qt::CTRL + Qt::Key_Y );
 	edit_menu->addSeparator();
 	edit_menu->addAction( embed::getIconPixmap( "setup_general" ),
 					tr( "Settings" ),
@@ -319,7 +319,7 @@ void MainWindow::finalize()
 	QMenu * help_menu = new QMenu( this );
 	menuBar()->addMenu( help_menu )->setText( tr( "&Help" ) );
 	// May use offline help
-	if( TRUE )
+	if( true )
 	{
 		help_menu->addAction( embed::getIconPixmap( "help" ),
 						tr( "Online help" ),
@@ -388,6 +388,12 @@ void MainWindow::finalize()
 							SLOT( exportProject() ),
 								m_toolBar );
 
+	toolButton * whatsthis = new toolButton(
+				embed::getIconPixmap( "whatsthis" ),
+					tr( "What's this?" ),
+					this, SLOT( enterWhatsThisMode() ),
+								m_toolBar );
+
 
 	m_toolBarLayout->setColumnMinimumWidth( 0, 5 );
 	m_toolBarLayout->addWidget( project_new, 0, 1 );
@@ -396,7 +402,7 @@ void MainWindow::finalize()
 	m_toolBarLayout->addWidget( project_open_recent, 0, 4 );
 	m_toolBarLayout->addWidget( project_save, 0, 5 );
 	m_toolBarLayout->addWidget( project_export, 0, 6 );
-
+	m_toolBarLayout->addWidget( whatsthis, 0, 7 );
 
 
 	// window-toolbar
@@ -574,7 +580,7 @@ bool MainWindow::mayChangeProject()
 
 	if( !engine::getSong()->isModified() )
 	{
-		return( TRUE );
+		return( true );
 	}
 
 	QMessageBox mb( tr( "Project not saved" ),
@@ -594,10 +600,10 @@ bool MainWindow::mayChangeProject()
 	}
 	else if( answer == QMessageBox::Discard )
 	{
-		return( TRUE );
+		return( true );
 	}
 
-	return( FALSE );
+	return( false );
 }
 
 
@@ -605,9 +611,9 @@ bool MainWindow::mayChangeProject()
 
 void MainWindow::clearKeyModifiers()
 {
-	m_keyMods.m_ctrl = FALSE;
-	m_keyMods.m_shift = FALSE;
-	m_keyMods.m_alt = FALSE;
+	m_keyMods.m_ctrl = false;
+	m_keyMods.m_shift = false;
+	m_keyMods.m_alt = false;
 }
 
 
@@ -760,7 +766,7 @@ bool MainWindow::saveProject()
 	{
 		engine::getSong()->guiSaveProject();
 	}
-	return( TRUE );
+	return( true );
 }
 
 
@@ -787,9 +793,9 @@ bool MainWindow::saveProjectAs()
 	{
 		engine::getSong()->guiSaveProjectAs(
 						sfd.selectedFiles()[0] );
-		return( TRUE );
+		return( true );
 	}
-	return( FALSE );
+	return( false );
 }
 
 
@@ -1014,9 +1020,9 @@ void MainWindow::keyPressEvent( QKeyEvent * _ke )
 {
 	switch( _ke->key() )
 	{
-		case Qt::Key_Control: m_keyMods.m_ctrl = TRUE; break;
-		case Qt::Key_Shift: m_keyMods.m_shift = TRUE; break;
-		case Qt::Key_Alt: m_keyMods.m_alt = TRUE; break;
+		case Qt::Key_Control: m_keyMods.m_ctrl = true; break;
+		case Qt::Key_Shift: m_keyMods.m_shift = true; break;
+		case Qt::Key_Alt: m_keyMods.m_alt = true; break;
 		default:
 		{
 			InstrumentTrackWindow * w =
@@ -1040,9 +1046,9 @@ void MainWindow::keyReleaseEvent( QKeyEvent * _ke )
 {
 	switch( _ke->key() )
 	{
-		case Qt::Key_Control: m_keyMods.m_ctrl = FALSE; break;
-		case Qt::Key_Shift: m_keyMods.m_shift = FALSE; break;
-		case Qt::Key_Alt: m_keyMods.m_alt = FALSE; break;
+		case Qt::Key_Control: m_keyMods.m_ctrl = false; break;
+		case Qt::Key_Shift: m_keyMods.m_shift = false; break;
+		case Qt::Key_Alt: m_keyMods.m_alt = false; break;
 		default:
 			if( InstrumentTrackView::topLevelInstrumentTrackWindow() )
 			{
@@ -1143,5 +1149,5 @@ void MainWindow::autoSave()
 }
 
 
-#include "moc_MainWindow.cxx"
+
 

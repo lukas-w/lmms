@@ -22,7 +22,7 @@
  *
  */
 
-#include <QtXml/QDomElement>
+#include <QDomElement>
 
 #include "EnvelopeAndLfoParameters.h"
 #include "debug.h"
@@ -68,6 +68,7 @@ void EnvelopeAndLfoParameters::LfoInstances::reset()
 
 
 
+
 void EnvelopeAndLfoParameters::LfoInstances::add( EnvelopeAndLfoParameters * lfo )
 {
 	QMutexLocker m( &m_lfoListMutex );
@@ -86,7 +87,6 @@ void EnvelopeAndLfoParameters::LfoInstances::remove( EnvelopeAndLfoParameters * 
 
 
 
-
 EnvelopeAndLfoParameters::EnvelopeAndLfoParameters(
 					float _value_for_zero_amount,
 							Model * _parent ) :
@@ -100,8 +100,12 @@ EnvelopeAndLfoParameters::EnvelopeAndLfoParameters(
 	m_releaseModel( 0.1, 0.0, 2.0, 0.001, this, tr( "Release" ) ),
 	m_amountModel( 0.0, -1.0, 1.0, 0.005, this, tr( "Modulation" ) ),
 	m_valueForZeroAmount( _value_for_zero_amount ),
+	m_pahdFrames( 0 ),
+	m_rFrames( 0 ),
 	m_pahdEnv( NULL ),
 	m_rEnv( NULL ),
+	m_pahdBufSize( 0 ),
+	m_rBufSize( 0 ),
 	m_lfoPredelayModel( 0.0, 0.0, 1.0, 0.001, this, tr( "LFO Predelay" ) ),
 	m_lfoAttackModel( 0.0, 0.0, 1.0, 0.001, this, tr( "LFO Attack" ) ),
 	m_lfoSpeedModel( 0.1, 0.001, 1.0, 0.0001,
@@ -217,6 +221,13 @@ inline sample_t EnvelopeAndLfoParameters::lfoShapeSample( fpp_t _frame_offset )
 			break;
 		case UserDefinedWave:
 			shape_sample = m_userWave.userWaveSample( phase );
+			break;
+		case RandomWave:
+			if( frame == 0 )
+			{
+				m_random = Oscillator::noiseSample( 0.0f );
+			}
+			shape_sample = m_random;
 			break;
 		case SineWave:
 		default:
@@ -392,8 +403,6 @@ void EnvelopeAndLfoParameters::loadSettings( const QDomElement & _this )
 
 void EnvelopeAndLfoParameters::updateSampleVars()
 {
-	engine::mixer()->lock();
-
 	const float frames_per_env_seg = SECS_PER_ENV_SEGMENT *
 				engine::mixer()->processingSampleRate();
 	// TODO: Remove the expKnobVals, time should be linear
@@ -429,15 +438,24 @@ void EnvelopeAndLfoParameters::updateSampleVars()
 
 	if( static_cast<int>( floorf( m_amount * 1000.0f ) ) == 0 )
 	{
-		//m_pahdFrames = 0;
 		m_rFrames = 0;
 	}
 
-	delete[] m_pahdEnv;
-	delete[] m_rEnv;
-
-	m_pahdEnv = new sample_t[m_pahdFrames];
-	m_rEnv = new sample_t[m_rFrames];
+	// if the buffers are too small, make bigger ones - so we only alloc new memory when necessary
+	if( m_pahdBufSize < m_pahdFrames )
+	{
+		sample_t * tmp = m_pahdEnv;
+		m_pahdEnv = new sample_t[m_pahdFrames];
+		delete tmp;
+		m_pahdBufSize = m_pahdFrames;
+	}
+	if( m_rBufSize < m_rFrames )
+	{
+		sample_t * tmp = m_rEnv;
+		m_rEnv = new sample_t[m_rFrames];
+		delete tmp;
+		m_rBufSize = m_rFrames;
+	}
 
 	const float aa = m_amountAdd;
 	for( f_cnt_t i = 0; i < predelay_frames; ++i )
@@ -516,13 +534,12 @@ void EnvelopeAndLfoParameters::updateSampleVars()
 
 	emit dataChanged();
 
-	engine::mixer()->unlock();
 }
 
 
 
 
 
-#include "moc_EnvelopeAndLfoParameters.cxx"
+
 
 

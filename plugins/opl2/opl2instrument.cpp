@@ -49,7 +49,7 @@
 #include "InstrumentPlayHandle.h"
 #include "InstrumentTrack.h"
 
-#include <QtXml/QDomDocument>
+#include <QDomDocument>
 
 #include "opl.h"
 #include "temuopl.h"
@@ -283,7 +283,7 @@ int opl2instrument::pushVoice(int v) {
 	return i;
 }
 
-bool opl2instrument::handleMidiEvent( const MidiEvent& event, const MidiTime& time )
+bool opl2instrument::handleMidiEvent( const MidiEvent& event, const MidiTime& time, f_cnt_t offset )
 {
 	emulatorMutex.lock();
 	int key, vel, voice, tmp_pb;
@@ -713,4 +713,4 @@ void opl2instrumentView::modelChanged()
 }
 
 
-#include "moc_opl2instrument.cxx"
+

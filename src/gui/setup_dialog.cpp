@@ -22,14 +22,14 @@
  *
  */
 
-#include <QtGui/QComboBox>
-#include <QtGui/QImageReader>
-#include <QtGui/QLabel>
-#include <QtGui/QLayout>
-#include <QtGui/QLineEdit>
-#include <QtGui/QMessageBox>
-#include <QtGui/QSlider>
-#include <QtGui/QWhatsThis>
+#include <QComboBox>
+#include <QImageReader>
+#include <QLabel>
+#include <QLayout>
+#include <QLineEdit>
+#include <QMessageBox>
+#include <QSlider>
+#include <QWhatsThis>
 
 #include "setup_dialog.h"
 #include "tab_bar.h"
@@ -121,7 +121,9 @@ setupDialog::setupDialog( ConfigTabs _tab_to_open ) :
 	m_printNoteLabels(configManager::inst()->value( "ui",
 						   "printnotelabels").toInt() ),
 	m_displayWaveform(configManager::inst()->value( "ui",
-						   "displaywaveform").toInt() )
+						   "displaywaveform").toInt() ),
+	m_disableAutoQuit(configManager::inst()->value( "ui",
+						   "disableautoquit").toInt() )
 {
 	setWindowIcon( embed::getIconPixmap( "setup_general" ) );
 	setWindowTitle( tr( "Setup LMMS" ) );
@@ -288,6 +290,15 @@ setupDialog::setupDialog( ConfigTabs _tab_to_open ) :
 	displayWaveform->setChecked( m_displayWaveform );
 	connect( displayWaveform, SIGNAL( toggled( bool ) ),
 				this, SLOT( toggleDisplayWaveform( bool ) ) );
+
+	ledCheckBox * disableAutoquit = new ledCheckBox(
+				tr( "Keep effects running even without input" ),
+								misc_tw );
+	labelNumber++;
+	disableAutoquit->move( XDelta, YDelta*labelNumber );
+	disableAutoquit->setChecked( m_disableAutoQuit );
+	connect( disableAutoquit, SIGNAL( toggled( bool ) ),
+				this, SLOT( toggleDisableAutoquit( bool ) ) );
 
 	misc_tw->setFixedHeight( YDelta*labelNumber + HeaderSize );
 
@@ -609,7 +620,7 @@ setupDialog::setupDialog( ConfigTabs _tab_to_open ) :
 	for( AswMap::iterator it = m_audioIfaceSetupWidgets.begin();
 				it != m_audioIfaceSetupWidgets.end(); ++it )
 	{
-		m_audioIfaceNames[tr( it.key().toAscii())] = it.key();
+		m_audioIfaceNames[tr( it.key().toLatin1())] = it.key();
 	}
 	for( trMap::iterator it = m_audioIfaceNames.begin();
 				it != m_audioIfaceNames.end(); ++it )
@@ -620,7 +631,7 @@ setupDialog::setupDialog( ConfigTabs _tab_to_open ) :
 		m_audioInterfaces->addItem( it.key() );
 	}
 	m_audioInterfaces->setCurrentIndex( m_audioInterfaces->findText(
-			tr( engine::mixer()->audioDevName().toAscii() ) ) );
+			tr( engine::mixer()->audioDevName().toLatin1() ) ) );
 	m_audioIfaceSetupWidgets[engine::mixer()->audioDevName()]->show();
 
 	connect( m_audioInterfaces, SIGNAL( activated( const QString & ) ),
@@ -689,7 +700,7 @@ setupDialog::setupDialog( ConfigTabs _tab_to_open ) :
 	for( MswMap::iterator it = m_midiIfaceSetupWidgets.begin();
 				it != m_midiIfaceSetupWidgets.end(); ++it )
 	{
-		m_midiIfaceNames[tr( it.key().toAscii())] = it.key();
+		m_midiIfaceNames[tr( it.key().toLatin1())] = it.key();
 	}
 	for( trMap::iterator it = m_midiIfaceNames.begin();
 				it != m_midiIfaceNames.end(); ++it )
@@ -701,7 +712,7 @@ setupDialog::setupDialog( ConfigTabs _tab_to_open ) :
 	}
 
 	m_midiInterfaces->setCurrentIndex( m_midiInterfaces->findText(
-		tr( engine::mixer()->midiClientName().toAscii() ) ) );
+		tr( engine::mixer()->midiClientName().toLatin1() ) ) );
 	m_midiIfaceSetupWidgets[engine::mixer()->midiClientName()]->show();
 
 	connect( m_midiInterfaces, SIGNAL( activated( const QString & ) ),
@@ -813,6 +824,8 @@ void setupDialog::accept()
 					QString::number( m_printNoteLabels ) );
 	configManager::inst()->setValue( "ui", "displaywaveform",
 					QString::number( m_displayWaveform ) );
+	configManager::inst()->setValue( "ui", "disableautoquit",
+					QString::number( m_disableAutoQuit ) );
 
 
 	configManager::inst()->setWorkingDir( m_workingDir );
@@ -999,6 +1012,12 @@ void setupDialog::toggleNoteLabels( bool en )
 void setupDialog::toggleDisplayWaveform( bool en )
 {
 	m_displayWaveform = en;
+}
+
+
+void setupDialog::toggleDisableAutoquit( bool en )
+{
+	m_disableAutoQuit = en;
 }
 
 
@@ -1283,5 +1302,5 @@ void setupDialog::displayMIDIHelp()
 
 
 
-#include "moc_setup_dialog.cxx"
+
 

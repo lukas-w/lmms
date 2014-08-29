@@ -23,10 +23,10 @@
  */
 
 
-#include <QtGui/QKeyEvent>
-#include <QtGui/QLabel>
-#include <QtGui/QLayout>
-#include <QtGui/QMdiArea>
+#include <QKeyEvent>
+#include <QLabel>
+#include <QLayout>
+#include <QMdiArea>
 
 #include "bb_editor.h"
 #include "bb_track_container.h"
@@ -35,6 +35,8 @@
 #include "song.h"
 #include "tool_button.h"
 #include "config_mgr.h"
+#include "DataFile.h"
+#include "string_pair_drag.h"
 
 #include "TrackContainer.h"
 #include "pattern.h"
@@ -157,6 +159,26 @@ bbEditor::~bbEditor()
 }
 
 
+void bbEditor::dropEvent( QDropEvent * de )
+{
+	QString type = stringPairDrag::decodeKey( de );
+	QString value = stringPairDrag::decodeValue( de );
+	
+	if( type.left( 6 ) == "track_" )
+	{
+		DataFile dataFile( value.toUtf8() );
+		track * t = track::create( dataFile.content().firstChild().toElement(), model() );
+		
+		t->deleteTCOs();
+		m_bbtc->updateAfterTrackAdd();
+		
+		de->accept();
+	}
+	else
+	{
+		TrackContainerView::dropEvent( de );
+	}
+}
 
 
 void bbEditor::removeBBView( int _bb )
@@ -301,5 +323,5 @@ void bbEditor::keyPressEvent( QKeyEvent * _ke )
 
 
 
-#include "moc_bb_editor.cxx"
+
 

@@ -178,6 +178,11 @@ const float MAX_FREQ = 48000.0f;
 
 const float INTEGRATOR = 3.0f / 7.0f;
 
+const float FM_AMOUNT = 0.25f;
+
+const float PW_MIN = 0.25f;
+const float PW_MAX = 100.0f - PW_MIN;
+
 class MonstroInstrument;
 class MonstroView;
 
@@ -185,30 +190,17 @@ class MonstroView;
 class MonstroSynth
 {
 public:
-	MonstroSynth( MonstroInstrument * _i, NotePlayHandle * _nph,
-					const sample_rate_t _samplerate, fpp_t _frames );
+	MonstroSynth( MonstroInstrument * _i, NotePlayHandle * _nph );
 	virtual ~MonstroSynth();
 
 	void renderOutput( fpp_t _frames, sampleFrame * _buf );
-
-	inline sample_rate_t samplerate() const
-	{
-		return m_samplerate;
-	}
 
 private:
 
 	MonstroInstrument * m_parent;
 	NotePlayHandle * m_nph;
-	const sample_rate_t m_samplerate;
-	fpp_t m_fpp;
 
-	sample_t * m_env1_buf;
-	sample_t * m_env2_buf;
-	sample_t * m_lfo1_buf;
-	sample_t * m_lfo2_buf;
-
-	void renderModulators( fpp_t _frames );
+	inline void updateModulators( float * env1, float * env2, float * lfo1, float * lfo2, int frames );
 
 	// linear interpolation
 /*	inline sample_t interpolate( sample_t s1, sample_t s2, float x )
@@ -216,11 +208,16 @@ private:
 		return s1 + ( s2 - s1 ) * x;
 	}*/ // using interpolation.h from now on
 
-	inline sample_t calcSlope( sample_t _s, float _slope )
+	inline sample_t calcSlope1( sample_t s );
+
+	inline sample_t calcSlope2( sample_t s );
+
+
+	// checks for lower bound for phase, upper bound is already checked by oscillator-functions in both
+	// oscillator.h and bandlimitedwave.h so we save some cpu by only checking lower bound
+	inline float lowBoundCheck( float ph )
 	{
-		if( _slope == 0.0f ) return _s;
-		const double exp = fastPow( 10.0, static_cast<double>( _slope * -1.0 ) );
-		return fastPow( _s, exp );
+		return ph < 0.0f ? ph - ( static_cast<int>( ph ) - 1.0f ) : ph;
 	}
 
 	inline sample_t oscillate( int _wave, const float _ph, float _wavelen )
@@ -297,17 +294,21 @@ private:
 	float m_osc3l_phase;
 	float m_osc3r_phase;
 
-	sample_t m_env1_phase;
-	sample_t m_env2_phase;
+	sample_t m_env_phase [2];
+	float m_lfo_phase [2];
+	sample_t m_lfo_last [2];
+	sample_t m_lfo_next [2];
+	float m_lfo_inc [2];
+	float m_lfo_rate [2];	
+	float m_env_sus [2];
 
-	float m_lfo1_phase;
-	float m_lfo2_phase;
-
-	sample_t m_lfo1_last;
-	sample_t m_lfo2_last;
-	
-	sample_t m_lfo1_s;
-	sample_t m_lfo2_s;
+	int m_lfovalue[2];
+	int m_lfoatt[2];
+	float m_env_pre[2];
+	float m_env_att[2];
+	float m_env_hold[2];
+	float m_env_dec[2];
+	float m_env_rel[2];
 
 	sample_t m_osc1l_last;
 	sample_t m_osc1r_last;
@@ -325,6 +326,11 @@ private:
 	bool m_invert3l;
 	bool m_invert2r;
 	bool m_invert3r;
+	
+	int m_counter2l;
+	int m_counter2r;
+	int m_counter3l;
+	int m_counter3r;
 };
 
 class MonstroInstrument : public Instrument
@@ -349,14 +355,22 @@ public:
 	virtual PluginView * instantiateView( QWidget * _parent );
 
 public slots:
-	void updateVolumes();
-	void updateFreq();
-	void updatePO();
+	void updateVolume1();
+	void updateVolume2();
+	void updateVolume3();
+	void updateFreq1();
+	void updateFreq2();
+	void updateFreq3();
+	void updatePO1();
+	void updatePO2();
+	void updatePO3();
 	void updateEnvelope1();
 	void updateEnvelope2();
 	void updateLFOAtts();
 	void updateSamplerate();
-
+	void updateSlope1();
+	void updateSlope2();
+	
 protected:
 	float m_osc1l_vol;
 	float m_osc1r_vol;
@@ -396,11 +410,18 @@ protected:
 	f_cnt_t m_env1_relF;
 	f_cnt_t m_env2_relF;
 
+	float m_slope1;
+	float m_slope2;
+
 	f_cnt_t m_lfo1_att;
 	f_cnt_t m_lfo2_att;
 
 	sample_rate_t m_samplerate;
 	fpp_t m_fpp;
+	
+	float m_integrator;
+	float m_fmCorrection;
+	int m_counterMax;
 
 private:
 	inline float leftCh( float _vol, float _pan )

@@ -22,12 +22,12 @@
  *
  */
 
-#include <QtXml/QDomDocument>
-#include <QtGui/QApplication>
-#include <QtGui/QProgressDialog>
-#include <QtCore/QDir>
-#include <QtCore/QBuffer>
-#include <QtCore/QDebug>
+#include <QDomDocument>
+#include <QApplication>
+#include <QProgressDialog>
+#include <QDir>
+#include <QBuffer>
+#include <QDebug>
 
 #include "FlpImport.h"
 #include "NotePlayHandle.h"
@@ -982,6 +982,7 @@ if( p.currentEffectChannel <= NumFLFxChannels )
 
 			case FLP_LayerChans:
 				p.channels[data].layerParent = cur_channel;
+				break;
 
 			// DWORD EVENTS
 			case FLP_Color:

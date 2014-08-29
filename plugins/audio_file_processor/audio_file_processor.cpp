@@ -23,11 +23,11 @@
  */
 
 
-#include <QtGui/QPainter>
-#include <QtGui/QBitmap>
-#include <QtXml/QDomDocument>
-#include <QtCore/QFileInfo>
-#include <QtGui/QDropEvent>
+#include <QPainter>
+#include <QBitmap>
+#include <QDomDocument>
+#include <QFileInfo>
+#include <QDropEvent>
 
 #include <samplerate.h>
 
@@ -119,6 +119,7 @@ void audioFileProcessor::playNote( NotePlayHandle * _n,
 						sampleFrame * _working_buffer )
 {
 	const fpp_t frames = _n->framesLeftForCurrentPeriod();
+	const f_cnt_t offset = _n->noteOffset();
 
 	// Magic key - a frequency < 20 (say, the bottom piano note if using
 	// a A4 base tuning) restarts the start point. The note is not actually
@@ -165,14 +166,14 @@ void audioFileProcessor::playNote( NotePlayHandle * _n,
 
 	if( ! _n->isFinished() )
 	{
-		if( m_sampleBuffer.play( _working_buffer,
+		if( m_sampleBuffer.play( _working_buffer + offset,
 						(handleState *)_n->m_pluginData,
 						frames, _n->frequency(),
 						static_cast<SampleBuffer::LoopMode>( m_loopModel.value() ) ) )
 		{
 			applyRelease( _working_buffer, _n );
 			instrumentTrack()->processAudioBuffer( _working_buffer,
-									frames,_n );
+									frames + offset, _n );
 
 			emit isPlaying( ((handleState *)_n->m_pluginData)->frameIndex() );
 		}
@@ -231,7 +232,7 @@ void audioFileProcessor::loadSettings( const QDomElement & _this )
 {
 	if( _this.attribute( "src" ) != "" )
 	{
-		setAudioFile( _this.attribute( "src" ), FALSE );
+		setAudioFile( _this.attribute( "src" ), false );
 	}
 	else if( _this.attribute( "sampledata" ) != "" )
 	{
@@ -431,7 +432,7 @@ AudioFileProcessorView::AudioFileProcessorView( Instrument * _instrument,
 			"sound like the original sample.") );
 
 	m_reverseButton = new pixmapButton( this );
-	m_reverseButton->setCheckable( TRUE );
+	m_reverseButton->setCheckable( true );
 	m_reverseButton->move( 164, 105 );
 	m_reverseButton->setActiveGraphic( PLUGIN_NAME::getIconPixmap(
 							"reverse_on" ) );
@@ -446,7 +447,7 @@ AudioFileProcessorView::AudioFileProcessorView( Instrument * _instrument,
 // loop button group
 
 	pixmapButton * m_loopOffButton = new pixmapButton( this );
-	m_loopOffButton->setCheckable( TRUE );
+	m_loopOffButton->setCheckable( true );
 	m_loopOffButton->move( 190, 105 );
 	m_loopOffButton->setActiveGraphic( PLUGIN_NAME::getIconPixmap(
 							"loop_off_on" ) );
@@ -459,7 +460,7 @@ AudioFileProcessorView::AudioFileProcessorView( Instrument * _instrument,
 
 
 	pixmapButton * m_loopOnButton = new pixmapButton( this );
-	m_loopOnButton->setCheckable( TRUE );
+	m_loopOnButton->setCheckable( true );
 	m_loopOnButton->move( 190, 124 );
 	m_loopOnButton->setActiveGraphic( PLUGIN_NAME::getIconPixmap(
 							"loop_on_on" ) );
@@ -471,7 +472,7 @@ AudioFileProcessorView::AudioFileProcessorView( Instrument * _instrument,
 			"The sample loops between the end point and the loop point." ) );
 
 	pixmapButton * m_loopPingPongButton = new pixmapButton( this );
-	m_loopPingPongButton->setCheckable( TRUE );
+	m_loopPingPongButton->setCheckable( true );
 	m_loopPingPongButton->move( 216, 124 );
 	m_loopPingPongButton->setActiveGraphic( PLUGIN_NAME::getIconPixmap(
 							"loop_pingpong_on" ) );
@@ -506,7 +507,7 @@ AudioFileProcessorView::AudioFileProcessorView( Instrument * _instrument,
 			"of the keyboard (< 20 Hz)") );
 
 	m_ampKnob = new knob( knobBright_26, this );
-	m_ampKnob->setVolumeKnob( TRUE );
+	m_ampKnob->setVolumeKnob( true );
 	m_ampKnob->move( 5, 108 );
 	m_ampKnob->setHintText( tr( "Amplify:" )+" ", "%" );
 	m_ampKnob->setWhatsThis(
@@ -555,7 +556,7 @@ AudioFileProcessorView::AudioFileProcessorView( Instrument * _instrument,
 
 	qRegisterMetaType<f_cnt_t>( "f_cnt_t" );
 
-	setAcceptDrops( TRUE );
+	setAcceptDrops( true );
 }
 
 
@@ -999,13 +1000,14 @@ void AudioFileProcessorWaveView::updateGraph()
 	{
 		reverse();
 	}
-	else if( m_last_from == m_from && m_last_to == m_to )
+	else if( m_last_from == m_from && m_last_to == m_to && m_sampleBuffer.amplification() == m_last_amp )
 	{
 		return;
 	}
 
 	m_last_from = m_from;
 	m_last_to = m_to;
+	m_last_amp = m_sampleBuffer.amplification();
 
 	m_graph.fill( Qt::transparent );
 	QPainter p( &m_graph );
@@ -1260,5 +1262,5 @@ Plugin * PLUGIN_EXPORT lmms_plugin_main( Model *, void * _data )
 }
 
 
-#include "moc_audio_file_processor.cxx"
+
 

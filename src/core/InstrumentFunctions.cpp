@@ -22,7 +22,7 @@
  *
  */
 
-#include <QtXml/QDomElement>
+#include <QDomElement>
 
 #include "InstrumentFunctions.h"
 #include "embed.h"
@@ -133,6 +133,8 @@ InstrumentFunctionNoteStacking::ChordTable::Init InstrumentFunctionNoteStacking:
 	{ QT_TRANSLATE_NOOP( "InstrumentFunctionNoteStacking", "Minor" ), { 0, 2, 3, 5, 7, 8, 10, -1 } },
 	{ QT_TRANSLATE_NOOP( "InstrumentFunctionNoteStacking", "Chromatic" ), { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, -1 } },
 	{ QT_TRANSLATE_NOOP( "InstrumentFunctionNoteStacking", "Half-Whole Diminished" ), { 0, 1, 3, 4, 6, 7, 9, 10, -1 } },
+	
+	{ QT_TRANSLATE_NOOP( "InstrumentFunctionNoteStacking", "5" ), { 0, 7, -1 } }
 } ;
 
 
@@ -233,7 +235,7 @@ void InstrumentFunctionNoteStacking::processNote( NotePlayHandle * _n )
 	// time an audio-buffer is rendered...
 	if( ( _n->origin() == NotePlayHandle::OriginArpeggio || ( _n->hasParent() == false && _n->instrumentTrack()->isArpeggioEnabled() == false ) ) &&
 			_n->totalFramesPlayed() == 0 &&
-			m_chordsEnabledModel.value() == true )
+			m_chordsEnabledModel.value() == true && ! _n->isReleased() )
 	{
 		// then insert sub-notes for chord
 		const int selected_chord = m_chordsModel.value();
@@ -241,11 +243,9 @@ void InstrumentFunctionNoteStacking::processNote( NotePlayHandle * _n )
 		for( int octave_cnt = 0; octave_cnt < m_chordRangeModel.value(); ++octave_cnt )
 		{
 			const int sub_note_key_base = base_note_key + octave_cnt * KeysPerOctave;
-			// if octave_cnt == 1 we're in the first octave and
-			// the base-note is already done, so we don't have to
-			// create it in the following loop, then we loop until
-			// there's a -1 in the interval-array
-			for( int i = ( octave_cnt == 0 ) ? 1 : 0; i < chord_table[selected_chord].size(); ++i )
+
+			// process all notes in the chord
+			for( int i = 0; i < chord_table[selected_chord].size(); ++i )
 			{
 				// add interval to sub-note-key
 				const int sub_note_key = sub_note_key_base + (int) chord_table[selected_chord][i];
@@ -523,4 +523,4 @@ void InstrumentFunctionArpeggio::loadSettings( const QDomElement & _this )
 }
 
 
-#include "moc_InstrumentFunctions.cxx"
+

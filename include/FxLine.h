@@ -23,8 +23,8 @@
  *
  */
 
-#ifndef _FX_LINE_H
-#define _FX_LINE_H
+#ifndef FX_LINE_H
+#define FX_LINE_H
 
 #include <QWidget>
 #include <QLabel>
@@ -40,12 +40,14 @@ class FxLine : public QWidget
 {
 	Q_OBJECT
 public:
+	Q_PROPERTY( QBrush backgroundActive READ backgroundActive WRITE setBackgroundActive )
 	FxLine( QWidget * _parent, FxMixerView * _mv, int _channelIndex);
 	~FxLine();
 
 	virtual void paintEvent( QPaintEvent * );
 	virtual void mousePressEvent( QMouseEvent * );
 	virtual void mouseDoubleClickEvent( QMouseEvent * );
+	virtual void contextMenuEvent( QContextMenuEvent * );
 
 	inline int channelIndex() { return m_channelIndex; }
 	void setChannelIndex(int index);
@@ -53,14 +55,29 @@ public:
 	knob * m_sendKnob;
 	SendButtonIndicator * m_sendBtn;
 
+	QBrush backgroundActive() const;
+	void setBackgroundActive( const QBrush & c );
+
+	static const int FxLineHeight;
+
 private:
+	static void drawFxLine( QPainter* p, const FxLine *fxLine, const QString& name, bool isActive, bool sendToThis, bool receiveFromThis );
+
 	FxMixerView * m_mv;
 	LcdWidget* m_lcd;
-
-
 	int m_channelIndex;
+	QBrush m_backgroundActive;
+	static QPixmap * s_sendBgArrow;
+	static QPixmap * s_receiveBgArrow;
 
-} ;
+private slots:
+	void renameChannel();
+	void removeChannel();
+	void moveChannelLeft();
+	void moveChannelRight();
+	void displayHelp();
+
+};
 
 
 #endif // FXLINE_H

@@ -74,6 +74,16 @@ public:
 	{
 		return m_midiChannel;
 	}
+	
+	/*! convenience function that returns offset for the first period and zero otherwise,
+		used by instruments to handle the offset: instruments have to check this property and 
+		add the correct number of empty frames in the beginning of the period */
+	f_cnt_t noteOffset() const
+	{
+		return m_totalFramesPlayed == 0
+			? offset()
+			: 0;
+	}
 
 	const float& frequency() const
 	{
@@ -266,7 +276,8 @@ private:
 											// release of note
 	NotePlayHandleList m_subNotes;			// used for chords and arpeggios
 	volatile bool m_released;				// indicates whether note is released
-	bool m_hasParent;
+	bool m_hasParent;						// indicates whether note has parent
+	NotePlayHandle * m_parent;			// parent note
 	bool m_hadChildren;
 	bool m_muted;							// indicates whether note is muted
 	track* m_bbTrack;						// related BB track

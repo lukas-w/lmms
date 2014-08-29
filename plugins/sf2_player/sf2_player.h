@@ -24,10 +24,10 @@
  */
 
 
-#ifndef _SF2_PLAYER_H
-#define _SF2_PLAYER_H
+#ifndef SF2_PLAYER_H
+#define SF2_PLAYER_H
 
-#include <QtCore/QMutex>
+#include <QMutex>
 
 #include "Instrument.h"
 #include "pixmap_button.h"
@@ -45,6 +45,7 @@ class NotePlayHandle;
 class patchesDialog;
 class QLabel;
 
+struct SF2PluginData;
 
 class sf2Instrument : public Instrument
 {
@@ -79,7 +80,7 @@ public:
 
 	virtual Flags flags() const
 	{
-		return IsSingleStreamed | IsMidiBased;
+		return IsSingleStreamed;
 	}
 
 	virtual PluginView * instantiateView( QWidget * _parent );
@@ -149,9 +150,14 @@ private:
 	FloatModel m_chorusSpeed;
 	FloatModel m_chorusDepth;
 
+	QVector<NotePlayHandle *> m_playingNotes;
+	QMutex m_playingNotesMutex;
 
 private:
 	void freeFont();
+	void noteOn( SF2PluginData * n );
+	void noteOff( SF2PluginData * n );
+	void renderFrames( f_cnt_t frames, sampleFrame * buf );
 
 	friend class sf2InstrumentView;
 

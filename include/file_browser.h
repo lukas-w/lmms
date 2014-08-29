@@ -28,7 +28,7 @@
 
 #include <QtCore/QDir>
 #include <QtCore/QMutex>
-#include <QtGui/QTreeWidget>
+#include <QTreeWidget>
 
 
 #include "SideBarWidget.h"
@@ -224,6 +224,8 @@ private:
 	static QPixmap * s_projectFilePixmap;
 	static QPixmap * s_presetFilePixmap;
 	static QPixmap * s_sampleFilePixmap;
+	static QPixmap * s_soundfontFilePixmap;
+	static QPixmap * s_vstPluginFilePixmap;
 	static QPixmap * s_midiFilePixmap;
 	static QPixmap * s_flpFilePixmap;
 	static QPixmap * s_unknownFilePixmap;

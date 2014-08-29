@@ -26,11 +26,11 @@
 #include "SampleBuffer.h"
 
 
-#include <QtCore/QBuffer>
-#include <QtCore/QFile>
-#include <QtCore/QFileInfo>
-#include <QtGui/QMessageBox>
-#include <QtGui/QPainter>
+#include <QBuffer>
+#include <QFile>
+#include <QFileInfo>
+#include <QMessageBox>
+#include <QPainter>
 
 
 #include <cstring>
@@ -272,8 +272,7 @@ void SampleBuffer::convertIntToFloat ( int_sample_t * & _ibuf, f_cnt_t _frames, 
 {
 			// following code transforms int-samples into
 			// float-samples and does amplifying & reversing
-			const float fac = m_amplification /
-						OUTPUT_SAMPLE_MULTIPLIER;
+			const float fac = 1 / OUTPUT_SAMPLE_MULTIPLIER;
 			m_data = new sampleFrame[_frames];
 			const int ch = ( _channels > 1 ) ? 1 : 0;
 
@@ -758,6 +757,12 @@ bool SampleBuffer::play( sampleFrame * _ab, handleState * _state,
 	_state->setBackwards( is_backwards );
 	_state->setFrameIndex( play_frame );
 
+	for( fpp_t i = 0; i < _frames; ++i )
+	{
+		_ab[i][0] *= m_amplification;
+		_ab[i][1] *= m_amplification;
+	}
+
 	return true;
 
 }
@@ -910,7 +915,7 @@ void SampleBuffer::visualize( QPainter & _p, const QRect & _dr,
 	const int h = _dr.height();
 
 	const int yb = h / 2 + _dr.y();
-	const float y_space = h*0.25f;
+	const float y_space = h*0.5f;
 	const int nb_frames = focus_on_range ? _to_frame - _from_frame : m_frames;
 
 	if( nb_frames < 60000 )
@@ -929,9 +934,9 @@ void SampleBuffer::visualize( QPainter & _p, const QRect & _dr,
 	for( int frame = first; frame < last; frame += fpp )
 	{
 		l[n] = QPoint( xb + ( (frame - first) * double( w ) / nb_frames ),
-			(int)( yb - ( m_data[frame][0] * y_space ) ) );
+			(int)( yb - ( m_data[frame][0] * y_space * m_amplification ) ) );
 		r[n] = QPoint( xb + ( (frame - first) * double( w ) / nb_frames ),
-			(int)( yb - ( m_data[frame][1] * y_space ) ) );
+			(int)( yb - ( m_data[frame][1] * y_space * m_amplification ) ) );
 		++n;
 	}
 	_p.drawPolyline( l, nb_frames / fpp );
@@ -986,7 +991,7 @@ QString SampleBuffer::openAudioFile() const
 		<< tr( "RAW-Files (*.raw)" )
 		//<< tr( "MOD-Files (*.mod)" )
 		;
-	ofd.setFilters( types );
+	ofd.setNameFilters( types );
 	if( !m_audioFile.isEmpty() )
 	{
 		// select previously opened file
@@ -1376,7 +1381,7 @@ void SampleBuffer::setEndFrame( const f_cnt_t _e )
 void SampleBuffer::setAmplification( float _a )
 {
 	m_amplification = _a;
-	update( true );
+	emit sampleUpdated();
 }
 
 
@@ -1463,7 +1468,7 @@ SampleBuffer::handleState::~handleState()
 
 
 
-#include "moc_SampleBuffer.cxx"
+
 
 
 /* vim: set tw=0 noexpandtab: */

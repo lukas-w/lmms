@@ -22,11 +22,11 @@
  *
  */
 
-#include <QtXml/QDomElement>
-#include <QtCore/QDir>
-#include <QtCore/QFile>
-#include <QtGui/QMessageBox>
-#include <QtGui/QApplication>
+#include <QDomElement>
+#include <QDir>
+#include <QFile>
+#include <QMessageBox>
+#include <QApplication>
 
 #include "lmmsversion.h"
 #include "config_mgr.h"
@@ -159,6 +159,7 @@ void configManager::addRecentlyOpenedProject( const QString & _file )
 		m_recentlyOpenedProjects.removeLast();
 	}
 	m_recentlyOpenedProjects.push_front( _file );
+	configManager::inst()->saveConfigFile();
 }
 
 
@@ -209,7 +210,7 @@ void configManager::setValue( const QString & _class,
 
 
 #ifdef LMMS_BUILD_WIN32
-#include <QtCore/QLibrary>
+#include <QLibrary>
 #include <shlobj.h>
 
 // taken from qt-win-opensource-src-4.2.2/src/corelib/io/qsettings.cpp
@@ -344,8 +345,10 @@ void configManager::loadConfigFile()
 	if( m_ladDir.isEmpty() || m_ladDir == QDir::separator() ||
 			( !m_ladDir.contains( ':' ) && !QDir( m_ladDir ).exists() ) )
 	{
-#ifdef LMMS_BUILD_WIN32
+#if defined(LMMS_BUILD_WIN32)
 		m_ladDir = m_pluginDir + "ladspa" + QDir::separator();
+#elif defined(LMMS_BUILD_APPLE)
+		m_ladDir = qApp->applicationDirPath() + "/../lib/lmms/ladspa/";
 #else
 		m_ladDir = qApp->applicationDirPath() + '/' + LIB_DIR + "/ladspa/";
 #endif
@@ -355,8 +358,10 @@ void configManager::loadConfigFile()
 	if( m_stkDir.isEmpty() || m_stkDir == QDir::separator() ||
 			!QDir( m_stkDir ).exists() )
 	{
-#ifdef LMMS_BUILD_WIN32
+#if defined(LMMS_BUILD_WIN32)
 		m_stkDir = m_dataDir + "stk/rawwaves/";
+#elif defined(LMMS_BUILD_APPLE)
+		m_stkDir = qApp->applicationDirPath() + "/../share/stk/rawwaves/";
 #else
 		m_stkDir = "/usr/share/stk/rawwaves/";
 #endif

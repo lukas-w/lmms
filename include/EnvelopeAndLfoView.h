@@ -26,7 +26,7 @@
 #ifndef ENVELOPE_AND_LFO_VIEW_H
 #define ENVELOPE_AND_LFO_VIEW_H
 
-#include <QtGui/QWidget>
+#include <QWidget>
 
 #include "ModelView.h"
 
@@ -90,7 +90,8 @@ private:
 
 	ledCheckBox * m_x100Cb;
 	ledCheckBox * m_controlEnvAmountCb;
-
+	
+	float m_randomGraph;
 } ;
 
 #endif

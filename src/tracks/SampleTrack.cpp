@@ -23,14 +23,14 @@
  *
  */
 
-#include <QtXml/QDomElement>
-#include <QtGui/QDropEvent>
-#include <QtGui/QMenu>
-#include <QtGui/QLayout>
-#include <QtGui/QMdiArea>
-#include <QtGui/QMdiSubWindow>
-#include <QtGui/QPainter>
-#include <QtGui/QPushButton>
+#include <QDomElement>
+#include <QDropEvent>
+#include <QMenu>
+#include <QLayout>
+#include <QMdiArea>
+#include <QMdiSubWindow>
+#include <QPainter>
+#include <QPushButton>
 
 #include "gui_templates.h"
 #include "SampleTrack.h"
@@ -231,6 +231,11 @@ void SampleTCOView::updateSample()
 
 void SampleTCOView::contextMenuEvent( QContextMenuEvent * _cme )
 {
+	if( _cme->modifiers() )
+	{
+		return;
+	}
+
 	QMenu contextMenu( this );
 	if( fixedTCOs() == false )
 	{
@@ -594,5 +599,5 @@ void SampleTrackView::modelChanged()
 
 
 
-#include "moc_SampleTrack.cxx"
+
 

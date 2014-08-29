@@ -209,7 +209,6 @@ private:
 	QString m_backgroundArtwork;
 	QStringList m_recentlyOpenedProjects;
 
-
 	typedef QVector<QPair<QString, QString> > stringPairVector;
 	typedef QMap<QString, stringPairVector> settingsMap;
 	settingsMap m_settings;

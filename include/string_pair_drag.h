@@ -3,7 +3,7 @@
  *                      for drag'n'drop of string-pairs
  *
  * Copyright (c) 2005-2007 Tobias Doerffel <tobydox/at/users.sourceforge.net>
- * 
+ *
  * This file is part of Linux MultiMedia Studio - http://lmms.sourceforge.net
  *
  * This program is free software; you can redistribute it and/or
@@ -26,9 +26,10 @@
 #ifndef _STRING_PAIR_DRAG_H
 #define _STRING_PAIR_DRAG_H
 
-#include <QtGui/QDrag>
-#include <QtGui/QDragEnterEvent>
-#include <QtGui/QDropEvent>
+#include <QDrag>
+#include <QDragEnterEvent>
+#include <QDropEvent>
+#include <QMimeData>
 
 #include "export.h"
 
@@ -44,6 +45,8 @@ public:
 
 	static bool processDragEnterEvent( QDragEnterEvent * _dee,
 						const QString & _allowed_keys );
+	static QString decodeMimeKey( const QMimeData * mimeData );
+	static QString decodeMimeValue( const QMimeData * mimeData );
 	static QString decodeKey( QDropEvent * _de );
 	static QString decodeValue( QDropEvent * _de );
 
