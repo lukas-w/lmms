@@ -1,6 +1,19 @@
+env:
+    global:
+    # The next declaration is the encrypted COVERITY_SCAN_TOKEN, created
+    #   via the "travis encrypt" command using the project repo's public key
+    - secure: "Be4mrjim2ICoP+kGvZM4gZBlCD6wn5kYqEt60hkbfBiywSlA2qQ5eDkVVWuv5MTRDVlWwEX0W0GIoDoG5YIpgJSVxSiuoaiEU5yyC+I9DFPeRdBr74bIaI366Xiauy6ap0NmQWb5GeBOZDSRd7aIySGhsHaOdkegGCDu7e2jRIk="
 language: cpp
 compiler: gcc
 before_install: sudo apt-get update
 install: sudo apt-get install libqt4-dev libsndfile-dev fftw3-dev libvorbis-dev libogg-dev libasound2-dev libjack-dev libsdl-dev libsamplerate0-dev libstk0-dev libfluidsynth-dev portaudio19-dev wine-dev g++-multilib libfltk1.3-dev
 before_script: mkdir build && cd build
 script: cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo .. && make -j8 VERBOSE=1
+addons:
+    coverity_scan:
+        project:
+            name: "Lukas-W/lmms"
+        notification_email: lukaswhl@gmail.com
+        build_command_prepend: "cmake ../; make clean"
+        build_command:   "make -j4"
+        branch_pattern: coverity
