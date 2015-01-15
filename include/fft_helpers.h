@@ -45,13 +45,13 @@ enum WINDOWS
  *
  *    returns -1 on error
  */
-float EXPORT maximum( float * _abs_spectrum, unsigned int _spec_size );
+EXPORT float maximum( float * _abs_spectrum, unsigned int _spec_size );
 
 /* apply hanning or hamming window to channel
  *
  *    returns -1 on error
  */
-int EXPORT hanming( float * _timebuffer, int _length, WINDOWS _type );
+EXPORT int hanming( float * _timebuffer, int _length, WINDOWS _type );
 
 /* compute absolute values of complex_buffer, save to absspec_buffer
  * take care that - compl_len is not bigger than complex_buffer!
@@ -59,7 +59,7 @@ int EXPORT hanming( float * _timebuffer, int _length, WINDOWS _type );
  *
  *    returns 0 on success, else -1
  */
-int EXPORT absspec( fftwf_complex * _complex_buffer, float * _absspec_buffer,
+EXPORT int absspec( fftwf_complex * _complex_buffer, float * _absspec_buffer,
 							int _compl_length );
 
 /* build fewer subbands from many absolute spectrum values
@@ -68,11 +68,11 @@ int EXPORT absspec( fftwf_complex * _complex_buffer, float * _absspec_buffer,
  *
  *    returns 0 on success, else -1
  */
-int EXPORT compressbands( float * _absspec_buffer, float * _compressedband,
+EXPORT int compressbands( float * _absspec_buffer, float * _compressedband,
 			int _num_old, int _num_new, int _bottom, int _top );
 
 
-int EXPORT calc13octaveband31( float * _absspec_buffer, float * _subbands,
+EXPORT int calc13octaveband31( float * _absspec_buffer, float * _subbands,
 				int _num_spec, float _max_frequency );
 
 /* compute power of finite time sequence
@@ -80,6 +80,6 @@ int EXPORT calc13octaveband31( float * _absspec_buffer, float * _subbands,
  *
  *    returns power on success, else -1
  */
-float EXPORT signalpower(float *timesignal, int num_values);
+EXPORT float signalpower(float *timesignal, int num_values);
 
 #endif

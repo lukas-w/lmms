@@ -358,9 +358,6 @@ CONFIGURE_FILE("${CMAKE_SOURCE_DIR}/plugins/zynaddsubfx/zynaddsubfx.rc.in" "${CM
 
 # set compiler flags
 SET(WERROR_FLAGS "-Wall -Werror=unused-function -Wno-sign-compare -Wno-strict-overflow")
-IF(NOT LMMS_BUILD_APPLE)
-   SET(WERROR_FLAGS "${WERROR_FLAGS} -Werror")
-ENDIF()
 
 # Due to a regression in gcc-4.8.X, we need to disable array-bounds check
 IF (CMAKE_COMPILER_IS_GNUCXX AND ((CMAKE_CXX_COMPILER_VERSION VERSION_EQUAL "4.8.0") OR (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER "4.8.0") OR LMMS_BUILD_WIN32))
