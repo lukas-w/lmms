@@ -438,7 +438,6 @@ void Song::processAutomations(const TrackList &tracklist, MidiTime timeStart, fp
 		{
 			track->getTCOsInRange(tcos, 0, timeEnd);
 		}
-		std::remove_if(tcos.begin(), tcos.end(), std::mem_fn(&TrackContentObject::isMuted));
 
 		values = automatedValuesAt(tcos, timeStart);
 	}
@@ -858,6 +857,9 @@ AutomatedValueMap Song::automatedValuesAt(const Track::tcoVector &tcos, MidiTime
 
 	for(TrackContentObject* tco : tcos)
 	{
+		if (tco->isMuted() || tco->startPosition() > time) {
+			continue;
+		}
 		AutomationPattern* p = dynamic_cast<AutomationPattern *>(tco);
 		if (!p) {
 			qCritical() << "automatedValuesAt: tco passed is not an automation pattern";
