@@ -40,7 +40,7 @@
 AudioSoundIo::AudioSoundIo( bool & outSuccessful, Mixer * _mixer ) :
 	AudioDevice( tLimit<ch_cnt_t>(
 		ConfigManager::inst()->value( "audiosoundio", "channels" ).toInt(), DEFAULT_CHANNELS, SURROUND_CHANNELS ),
-								_mixer )
+								_mixer, name() )
 {
 	outSuccessful = false;
 	m_soundio = NULL;

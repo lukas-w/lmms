@@ -26,6 +26,8 @@
 #define AUDIO_DEVICE_H
 
 #include <QtCore/QMutex>
+#include <QtCore/QString>
+
 #include <samplerate.h>
 
 #include "lmms_basics.h"
@@ -39,7 +41,7 @@ class QThread;
 class AudioDevice
 {
 public:
-	AudioDevice( const ch_cnt_t _channels, Mixer* mixer );
+	AudioDevice(const ch_cnt_t _channels, Mixer* mixer , QString name = QString());
 	virtual ~AudioDevice();
 
 	inline void lock()
@@ -88,7 +90,7 @@ public:
 
 	virtual void applyQualitySettings();
 
-
+	virtual QString getName();
 
 protected:
 	// subclasses can re-implement this for being used in conjunction with
@@ -153,6 +155,7 @@ private:
 
 	surroundSampleFrame * m_buffer;
 
+	QString m_name;
 } ;
 
 

@@ -53,7 +53,7 @@ AudioPortAudio::AudioPortAudio( bool & _success_ful, Mixer * _mixer ) :
 	AudioDevice( tLimit<ch_cnt_t>(
 		ConfigManager::inst()->value( "audioportaudio", "channels" ).toInt(),
 					DEFAULT_CHANNELS, SURROUND_CHANNELS ),
-								_mixer ),
+								_mixer, name() ),
 	m_paStream( NULL ),
 	m_wasPAInitError( false ),
 	m_outBuf( new surroundSampleFrame[mixer()->framesPerPeriod()] ),

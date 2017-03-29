@@ -24,6 +24,10 @@
 
 #include "Mixer.h"
 
+#include <functional>
+
+#include <QtCore/QDebug>
+
 #include "denormals.h"
 
 #include "lmmsconfig.h"
@@ -65,6 +69,73 @@ typedef LocklessList<PlayHandle *>::Element LocklessListElement;
 
 static __thread bool s_renderingThread;
 
+class AudioDevInfo
+{
+public:
+	bool isValid()
+	{
+		return construct != nullptr;
+	}
+
+	QString name;
+	std::function<AudioDevice*(Mixer*)> construct;
+
+	static AudioDevInfo findByName(const QString& name)
+	{
+		for (const AudioDevInfo& info : availableAudioDevs)
+		{
+			if (info.name == name) {
+				return info;
+			}
+		}
+		return AudioDevInfo{QString(), nullptr};
+	}
+
+	template<typename T>
+	static AudioDevInfo make()
+	{
+		return AudioDevInfo{
+			T::name(),
+			[](Mixer* mixer) -> AudioDevice* {
+				bool success;
+				AudioDevice* dev = new T(success, mixer);
+				if(! success)
+				{
+					delete dev;
+					dev = nullptr;
+				}
+				return dev;
+			}
+		};
+	}
+	static QVector<AudioDevInfo> availableAudioDevs;
+};
+
+QVector<AudioDevInfo> AudioDevInfo::availableAudioDevs = QVector<AudioDevInfo>({
+#ifdef LMMS_HAVE_SDL
+	AudioDevInfo::make<AudioSdl>(),
+#endif
+#ifdef LMMS_HAVE_ALSA
+	AudioDevInfo::make<AudioAlsa>(),
+#endif
+#ifdef LMMS_HAVE_PULSEAUDIO
+	AudioDevInfo::make<AudioPulseAudio>(),
+#endif
+#ifdef LMMS_HAVE_OSS
+	AudioDevInfo::make<AudioOss>(),
+#endif
+#ifdef LMMS_HAVE_SNDIO
+	AudioDevInfo::make<AudioSoundIo>(),
+#endif
+#ifdef LMMS_HAVE_JACK
+	AudioDevInfo::make<AudioJack>(),
+#endif
+#ifdef LMMS_HAVE_PORTAUDIO
+	AudioDevInfo::make<AudioPortAudio>(),
+#endif
+	AudioDevInfo::make<AudioDummy>(),
+// add more device classes here
+});
 
 
 
@@ -207,7 +278,6 @@ void Mixer::initDevices()
 	bool success_ful = false;
 	if( m_renderOnly ) {
 		m_audioDev = new AudioDummy( success_ful, this );
-		m_audioDevName = AudioDummy::name();
 		m_midiClient = new MidiDummy;
 		m_midiClientName = MidiDummy::name();
 	} else {
@@ -820,135 +890,34 @@ AudioDevice * Mixer::tryAudioDevices()
 
 	m_audioDevStartFailed = false;
 
-#ifdef LMMS_HAVE_SDL
-	if( dev_name == AudioSdl::name() || dev_name == "" )
+	if (dev_name.isEmpty())
 	{
-		dev = new AudioSdl( success_ful, this );
-		if( success_ful )
+		for (const AudioDevInfo& devInfo : AudioDevInfo::availableAudioDevs)
 		{
-			m_audioDevName = AudioSdl::name();
-			return dev;
+			dev = devInfo.construct(this);
+			if (dev) break;
 		}
-		delete dev;
 	}
-#endif
-
-
-#ifdef LMMS_HAVE_ALSA
-	if( dev_name == AudioAlsa::name() || dev_name == "" )
+	else
 	{
-		dev = new AudioAlsa( success_ful, this );
-		if( success_ful )
+		AudioDevInfo devInfo = AudioDevInfo::findByName(dev_name);
+		if (! devInfo.isValid())
 		{
-			m_audioDevName = AudioAlsa::name();
-			return dev;
+			qWarning() << "Audio device name" << dev_name << "is invalid or not available. Falling back to dummy audio.";
+			devInfo = AudioDevInfo::make<AudioDummy>();
 		}
-		delete dev;
-	}
-#endif
 
-
-#ifdef LMMS_HAVE_PULSEAUDIO
-	if( dev_name == AudioPulseAudio::name() || dev_name == "" )
-	{
-		dev = new AudioPulseAudio( success_ful, this );
-		if( success_ful )
-		{
-			m_audioDevName = AudioPulseAudio::name();
-			return dev;
-		}
-		delete dev;
-	}
-#endif
-
-
-#ifdef LMMS_HAVE_OSS
-	if( dev_name == AudioOss::name() || dev_name == "" )
-	{
-		dev = new AudioOss( success_ful, this );
-		if( success_ful )
-		{
-			m_audioDevName = AudioOss::name();
-			return dev;
-		}
-		delete dev;
-	}
-#endif
-
-#ifdef LMMS_HAVE_SNDIO
-	if( dev_name == AudioSndio::name() || dev_name == "" )
-	{
-		dev = new AudioSndio( success_ful, this );
-		if( success_ful )
-		{
-			m_audioDevName = AudioSndio::name();
-			return dev;
-		}
-		delete dev;
-	}
-#endif
-
-
-#ifdef LMMS_HAVE_JACK
-	if( dev_name == AudioJack::name() || dev_name == "" )
-	{
-		dev = new AudioJack( success_ful, this );
-		if( success_ful )
-		{
-			m_audioDevName = AudioJack::name();
-			return dev;
-		}
-		delete dev;
-	}
-#endif
-
-
-#ifdef LMMS_HAVE_PORTAUDIO
-	if( dev_name == AudioPortAudio::name() || dev_name == "" )
-	{
-		dev = new AudioPortAudio( success_ful, this );
-		if( success_ful )
-		{
-			m_audioDevName = AudioPortAudio::name();
-			return dev;
-		}
-		delete dev;
-	}
-#endif
-
-
-#ifdef LMMS_HAVE_SOUNDIO
-	if( dev_name == AudioSoundIo::name() || dev_name == "" )
-	{
-		dev = new AudioSoundIo( success_ful, this );
-		if( success_ful )
-		{
-			m_audioDevName = AudioSoundIo::name();
-			return dev;
-		}
-		delete dev;
-	}
-#endif
-
-
-	// add more device-classes here...
-	//dev = new audioXXXX( SAMPLE_RATES[m_qualityLevel], success_ful, this );
-	//if( sucess_ful )
-	//{
-	//	return dev;
-	//}
-	//delete dev
-
-	if( dev_name != AudioDummy::name() )
-	{
-		printf( "No audio-driver working - falling back to dummy-audio-"
-			"driver\nYou can render your songs and listen to the output "
-			"files...\n" );
-
-		m_audioDevStartFailed = true;
+		dev = devInfo.construct(this);
 	}
 
-	m_audioDevName = AudioDummy::name();
+	if (dev) {
+		return dev;
+	}
+
+	printf("No audio-driver working - falling back to dummy-audio-driver\n"
+		"You can render your songs and listen to the output files...\n");
+
+	m_audioDevStartFailed = true;
 
 	return new AudioDummy( success_ful, this );
 }

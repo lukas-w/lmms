@@ -813,7 +813,7 @@ SetupDialog::SetupDialog( ConfigTabs _tab_to_open ) :
 		ConfigManager::inst()->value( "mixer", "audiodev" );
 	if( audioDevName.length() == 0 )
 	{
-		audioDevName = Engine::mixer()->audioDevName();
+		audioDevName = Engine::mixer()->audioDev()->getName();
 		ConfigManager::inst()->setValue(
 					"mixer", "audiodev", audioDevName );
 	}

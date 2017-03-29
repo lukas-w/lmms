@@ -48,7 +48,7 @@ AudioPulseAudio::AudioPulseAudio( bool & _success_ful, Mixer*  _mixer ) :
 	AudioDevice( tLimit<ch_cnt_t>(
 		ConfigManager::inst()->value( "audiopa", "channels" ).toInt(),
 					DEFAULT_CHANNELS, SURROUND_CHANNELS ),
-								_mixer ),
+								_mixer, name() ),
 	m_s( NULL ),
 	m_quit( false ),
 	m_convertEndian( false )

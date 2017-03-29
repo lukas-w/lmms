@@ -36,7 +36,7 @@
 
 
 AudioSdl::AudioSdl( bool & _success_ful, Mixer*  _mixer ) :
-	AudioDevice( DEFAULT_CHANNELS, _mixer ),
+	AudioDevice( DEFAULT_CHANNELS, _mixer, name() ),
 	m_outBuf( new surroundSampleFrame[mixer()->framesPerPeriod()] ),
 	m_convertedBufPos( 0 ),
 	m_convertEndian( false )

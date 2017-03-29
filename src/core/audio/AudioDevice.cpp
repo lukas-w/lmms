@@ -31,12 +31,13 @@
 
 
 
-AudioDevice::AudioDevice( const ch_cnt_t _channels, Mixer*  _mixer ) :
+AudioDevice::AudioDevice( const ch_cnt_t _channels, Mixer*  _mixer, QString name ) :
 	m_supportsCapture( false ),
 	m_sampleRate( _mixer->processingSampleRate() ),
 	m_channels( _channels ),
 	m_mixer( _mixer ),
-	m_buffer( new surroundSampleFrame[mixer()->framesPerPeriod()] )
+	m_buffer( new surroundSampleFrame[mixer()->framesPerPeriod()] ),
+	m_name( name )
 {
 	int error;
 	if( ( m_srcState = src_new(
@@ -160,7 +161,10 @@ void AudioDevice::applyQualitySettings()
 	}
 }
 
-
+QString AudioDevice::getName()
+{
+	return m_name;
+}
 
 
 void AudioDevice::registerPort( AudioPort * )

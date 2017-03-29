@@ -47,7 +47,7 @@ AudioJack::AudioJack( bool & _success_ful, Mixer*  _mixer ) :
 	AudioDevice( tLimit<int>( ConfigManager::inst()->value(
 					"audiojack", "channels" ).toInt(),
 					DEFAULT_CHANNELS, SURROUND_CHANNELS ),
-								_mixer ),
+								_mixer, name() ),
 	m_client( NULL ),
 	m_active( false ),
 	m_midiClient( NULL ),
