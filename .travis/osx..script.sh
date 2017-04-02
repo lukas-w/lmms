@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -e
 
 if [ "$QT5" ]; then
         # Workaround; No FindQt5.cmake module exists

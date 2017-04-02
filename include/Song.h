@@ -204,7 +204,7 @@ public:
 		return m_globalAutomationTrack;
 	}
 
-	AutomatedValueMap automatedValuesAt(MidiTime time, int tcoNum = -1) const override;
+	AutomatedValueMap automatedValuesAt(MidiTime time, int tcoNum = -1) const Q_DECL_OVERRIDE;
 
 	// file management
 	void createNewProject();

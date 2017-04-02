@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -e
 
 PACKAGES="cmake libsndfile-dev fftw3-dev libvorbis-dev  libogg-dev
 	libasound2-dev libjack-dev libsdl-dev libsamplerate0-dev libstk0-dev

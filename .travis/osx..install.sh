@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -e
 
 PACKAGES="cmake pkgconfig fftw libogg libvorbis libsndfile libsamplerate jack sdl stk portaudio node fltk"
 
