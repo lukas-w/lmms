@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-
 set -e
 
 if [ "$TYPE" = 'style' ]; then
@@ -11,9 +10,7 @@ if [ "$TYPE" = 'style' ]; then
 	shellcheck $(find -O3 "$TRAVIS_BUILD_DIR/.travis/" "$TRAVIS_BUILD_DIR/cmake/" -type f -name '*.sh' -o -name "*.sh.in")
 
 else
-
 	mkdir -p build
-	cd build
 
 	export CMAKE_FLAGS="-DCMAKE_BUILD_TYPE=RelWithDebInfo"
 
@@ -21,32 +18,22 @@ else
 		export CMAKE_FLAGS="$CMAKE_FLAGS -DUSE_CCACHE=ON"
 	fi
 
-	"$TRAVIS_BUILD_DIR/.travis/$TRAVIS_OS_NAME.$TARGET_OS.script.sh"
-
-	make -j4
-
-	if [[ $TARGET_OS != win* ]]; then
-
-		make tests
-		tests/tests
-
-	fi
+	"$TRAVIS_BUILD_DIR/.travis/$TRAVIS_OS_NAME.script.sh"
 
 	# Package and upload non-tagged builds
 	if [ ! -z "$TRAVIS_TAG" ]; then
 		# Skip, handled by travis deploy instead
 		exit 0
-	elif [[ $TARGET_OS == win* ]]; then
-		make -j4 package
-		PACKAGE="$(ls lmms-*win*.exe)"
+	elif [[ $IMAGE_NAME == ubuntu-mingw-* ]]; then
+		if [[ $TAG != "14.04" ]]; then
+			# Skip, broken
+			exit 0
+		fi
+		PACKAGE="$(ls build/lmms-*win*.exe)"
 	elif [[ $TRAVIS_OS_NAME == osx ]]; then
-		make -j4 install > /dev/null
-		make dmg
-		PACKAGE="$(ls lmms-*.dmg)"
+		PACKAGE="$(ls build/lmms-*.dmg)"
 	else
-		make -j4 install > /dev/null
-		make appimage
-		PACKAGE="$(ls lmms-*.AppImage)"
+		PACKAGE="$(ls build/lmms-*.AppImage)"
 	fi
 
 	echo "Uploading $PACKAGE to transfer.sh..."

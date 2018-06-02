@@ -1,0 +1,7 @@
+ARG TAG
+FROM lmmsci/ubuntu-linux:${TAG}
+
+ADD tmp/ubuntu-linux-gcc.repos /tmp/repos
+RUN bash /tmp/repos
+ADD tmp/ubuntu-linux-gcc.packages /tmp/packages
+RUN apt-get update -yy && apt-get install -y $(cat /tmp/packages) && rm -rf /var/lib/apt/lists/*

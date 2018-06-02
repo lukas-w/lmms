@@ -1,17 +1,21 @@
 language: cpp
-compiler: gcc
-dist: trusty
 sudo: required
+services:
+    - docker
 cache:
     directories:
-        - apt_mingw_cache
         - $HOME/.ccache
+        - $HOME/docker-cache
+        - $HOME/Library/Caches/Homebrew
 matrix:
     include:
         - env: TYPE=style
-        - os: linux
-        - env: TARGET_OS=win32
-        - env: TARGET_OS=win64
+        - env: IMAGE_NAME=ubuntu-linux-gcc TAG=14.04
+        - env: IMAGE_NAME=ubuntu-mingw-w32 TAG=14.04 TARGET_OS=win32
+        - env: IMAGE_NAME=ubuntu-mingw-w64 TAG=14.04 TARGET_OS=win64
+        - env: IMAGE_NAME=ubuntu-linux-gcc TAG=18.04
+        - env: IMAGE_NAME=ubuntu-mingw-w32 TAG=18.04 TARGET_OS=win32
+        - env: IMAGE_NAME=ubuntu-mingw-w64 TAG=18.04 TARGET_OS=win64
         - os: osx
           osx_image: xcode8.3
 install: ${TRAVIS_BUILD_DIR}/.travis/install.sh

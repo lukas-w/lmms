@@ -1,0 +1,27 @@
+ARG UBUNTU_VERSION
+FROM ubuntu:${UBUNTU_VERSION}
+
+ADD ubuntu.ccache.sha256 /tmp/ccache/ccache.sha256
+ADD http://archive.ubuntu.com/ubuntu/pool/main/c/ccache/ccache_3.3.4-1_amd64.deb /tmp/ccache/
+RUN cd /tmp/ccache && \
+    sha256sum -c ccache.sha256 && \
+    dpkg -i ccache_3.3.4-1_amd64.deb && \
+    rm -r /tmp/ccache
+
+# For managing repos
+RUN apt-get update && apt-get install -y \
+    --force-yes --no-install-recommends  \
+        lsb-release                      \
+        software-properties-common       \
+        dirmngr                          \
+        gnupg                            \
+&& rm -rf /var/lib/apt/lists/*
+
+ADD tmp/ubuntu.repos /tmp/repos
+RUN bash /tmp/repos
+ADD tmp/ubuntu.packages /tmp/packages
+RUN apt-get update -yy &&                   \
+    apt-get install -y $(cat /tmp/packages) \
+&& rm -rf /var/lib/apt/lists/*
+
+ENV DEBIAN_FRONTEND noninteractive

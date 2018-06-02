@@ -1,0 +1,7 @@
+ARG TAG
+FROM lmmsci/ubuntu-mingw:${TAG}
+
+ADD tmp/ubuntu-mingw-w64.repos /tmp/repos
+RUN bash /tmp/repos
+ADD tmp/ubuntu-mingw-w64.packages /tmp/packages
+RUN apt-get update -yy && apt-get install -y $(cat /tmp/packages) && rm -rf /var/lib/apt/lists/*
