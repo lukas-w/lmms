@@ -5,7 +5,7 @@ CMAKE_FLAGS="$CMAKE_FLAGS -DUSE_WERROR=ON"
 export CMAKE_FLAGS
 
 # Start the docker container
-IMAGE=localhost:5000/$IMAGE_NAME:$TAG
+IMAGE=ci-image
 CONTAINER_NAME=TRAVIS
 BUILD_DIR=$(pwd)/build
 buildtools/docker/start.sh "$IMAGE" "$CONTAINER_NAME" "$BUILD_DIR"
@@ -22,6 +22,11 @@ if [[ $IMAGE_NAME != ubuntu-mingw-* ]]; then
 fi
 
 # Deploying MinGW only works with Ubuntu 14.04
-if [[ $IMAGE_NAME == ubuntu-linux-* || $TAG == "14.04" ]]; then
+if [[ $IMAGE_NAME == ubuntu-linux-* || $IMAGE_TAG == "14.04" ]]; then
 	buildtools/docker/run.sh "$CONTAINER_NAME" /src/buildtools/scripts/package.sh "$TARGET"
+fi
+
+if [ "$CIRCLECI" ]; then
+	# Copy artifacts
+	docker cp "$CONTAINER_NAME":/build/ "$BUILD_DIR"
 fi

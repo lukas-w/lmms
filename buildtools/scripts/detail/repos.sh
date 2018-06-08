@@ -4,12 +4,11 @@ SYSTEM=$1
 VER=$2
 DOCKER=$3
 
-policy=$(apt-cache policy)
-
 function has_repo {
 	if [[ "$DOCKER" ]]; then
 		return 1
 	fi
+	local policy=$(apt-cache policy)
 	if ! grep -q "$1" <<< $policy; then
 		return 1
 	fi

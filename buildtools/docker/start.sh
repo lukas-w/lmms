@@ -10,18 +10,27 @@ BUILD_DIR=$3
 
 if [ "$BUILD_DIR" ]; then
 	BUILD_DIR=$(readlink -f "$3")
-	DOCKER_ARGS="$DOCKER_ARGS -v $BUILD_DIR:/build"
+	if ! [ "$CIRCLECI" ]; then
+		DOCKER_ARGS="$DOCKER_ARGS -v $BUILD_DIR:/build"
+	fi
 fi
 
 SOURCE_DIR=$(realpath "$DIR/../../")
 
 info "Starting container"
 
+if ! [ "$CIRCLECI" ]; then
+	DOCKER_ARGS="$DOCKER_ARGS -v $SOURCE_DIR:/src"
+	DOCKER_ARGS="$DOCKER_ARGS -v $HOME/.ccache:/root/.ccache"
+fi
+
 docker run --name $CONTAINER_NAME -t -d  \
-	-v "$SOURCE_DIR":/src  \
-	-v $HOME/.ccache:/root/.ccache       \
 	-e SOURCE_DIR=/src                   \
 	-e BUILD_DIR=/build                  \
 	$DOCKER_ARGS $IMAGE
+
+if [ "$CIRCLECI" ]; then
+	docker cp $SOURCE_DIR $CONTAINER_NAME:/src
+fi
 
 info "Started container as $CONTAINER_NAME"

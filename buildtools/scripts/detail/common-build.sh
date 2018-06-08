@@ -10,6 +10,14 @@ if [ -z "$BUILD_DIR" ]; then
 	BUILD_DIR="$SOURCE_DIR/build"
 fi
 
+if [[ "$TRAVIS_BRANCH" ]]; then
+	GIT_BRANCH="$TRAVIS_BRANCH"
+elif [[ "$CIRCLE_BRANCH" ]]; then
+	GIT_BRANCH="$CIRCLE_BRANCH"
+else
+	GIT_BRANCH=$(git -C "$SOURCE_DIR" rev-parse --abbrev-ref HEAD)
+fi
+
 function parentimages() {
 	local img=$1
 	local parent_img=""

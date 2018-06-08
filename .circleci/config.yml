@@ -1,15 +1,15 @@
 version: 2
 
 shared:
-  restore_cache: &restore_cache
+  restore_ccache: &restore_ccache
     restore_cache:
       keys:
-        - ccache-{{ arch }}-{{ .Environment.CIRCLE_JOB }}-{{ .Branch }}
-        - ccache-{{ arch }}-{{ .Environment.CIRCLE_JOB }}
-        - ccache-{{ arch }}
-  save_cache: &save_cache
+        - ccache-{{ .Environment.CIRCLE_JOB }}-{{ .Branch }}
+        - ccache-{{ .Environment.CIRCLE_JOB }}
+        - ccache
+  save_ccache: &save_ccache
     save_cache:
-      key: ccache-{{ arch }}-{{ .Environment.CIRCLE_JOB }}-{{ .Branch }}-{{ .BuildNum }}
+      key: ccache-{{ .Environment.CIRCLE_JOB }}-{{ .Branch }}-{{ .BuildNum }}
       paths:
         - ~/.ccache
 
@@ -37,91 +37,35 @@ shared:
     CCACHE_LOGFILE: /tmp/artifacts/ccache.log
     MAKEFLAGS: -j6
 
+  common: &common
+    docker:
+      - image: lukaswhl/docker
+    steps:
+      - *init
+      - *restore_ccache
+      - setup_remote_docker
+      - checkout
+      - run:
+          name: Build Docker image
+          command: |
+            .travis/linux.install.sh
+      - run:
+          name: Build LMMS
+          command: |
+            mkdir build
+            .travis/linux.script.sh
+      - *ccache_stats
+      - *save_ccache
+
 jobs:
-  mingw32:
+  linux-gcc:
+    <<: *common
     environment:
       <<: *common_environment
-    docker:
-      - image: lmmsci/linux.mingw32:18.04
-    steps:
-      - checkout
-      - *init
-      - *restore_cache
-      - run:
-          name: Building
-          command: |
-            mkdir build && cd build
-            ../cmake/build_win32.sh
-            make lmms
-            make
-      - *ccache_stats
-      - *save_cache
-  mingw64:
-    environment:
-      <<: *common_environment
-    docker:
-      - image: lmmsci/linux.mingw64:18.04
-    steps:
-      - checkout
-      - *init
-      - *restore_cache
-      - run:
-          name: Building
-          command: |
-            mkdir build && cd build
-            ../cmake/build_win64.sh
-            make
-      - *ccache_stats
-      - *save_cache
-  linux.gcc:
-    docker:
-      - image: lmmsci/linux.gcc:18.04
-    environment:
-      <<: *common_environment
-    steps:
-      - checkout
-      - *init
-      - *restore_cache
-      - run:
-          name: Configure
-          command: mkdir build && cd build && cmake .. $CMAKE_OPTS -DCMAKE_INSTALL_PREFIX=./install
-      - run:
-          name: Build
-          command: cd build && make
-      - run:
-          name: Build tests
-          command: cd build && make tests
-      - run:
-          name: Run tests
-          command: build/tests/tests
-      - *ccache_stats
-      - run:
-          name: Build AppImage
-          command: |
-            cd build
-            make install
-            make appimage
-            cp ./lmms-*.AppImage /tmp/artifacts/
-      - store_artifacts:
-          path: /tmp/artifacts/
-          destination: /
-      - store_artifacts:
-          path: build/appimage.log
-          destination: /
-      - *save_cache
-  shellcheck:
-    docker:
-      - image: koalaman/shellcheck-alpine:v0.4.6
-    steps:
-      - checkout
-      - run:
-          name: Shellcheck
-          command: shellcheck $(find "./cmake/" -type f -name '*.sh' -o -name "*.sh.in")
+      IMAGE_NAME: ubuntu-linux-gcc
+      IMAGE_TAG: 14.04
 workflows:
   version: 2
   build-and-test:
     jobs:
-      - mingw32
-      - mingw64
-      - linux.gcc
-      - shellcheck
+      - linux-gcc

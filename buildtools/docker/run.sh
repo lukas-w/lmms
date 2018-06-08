@@ -12,7 +12,7 @@ PIPE="docker exec --interactive $CONTAINER_NAME /bin/bash -"
 while ! echo "$COMMAND" | $PIPE; do
 	error -n "Running command $COMMAND failed. "
 
-	if [[ $- == *i* || "$PS1" ]]; then
+	if ! [[ $- == *i* || "$PS1" ]]; then
 		# Non-interactive shell. Exit
 		exit 1
 	fi

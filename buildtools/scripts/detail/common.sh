@@ -50,9 +50,11 @@ error_exit() {
 }
 trap 'error_exit $(basename ${BASH_SOURCE}):${LINENO}' ERR
 
-function docker {
-	sudo docker $@
-}
+if [ -x "$(command -v sudo)" ]; then
+	function docker {
+		sudo docker $@
+	}
+fi
 
 # For macOS
 if ! [ -x "$(command -v realpath)" ]; then

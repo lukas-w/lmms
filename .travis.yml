@@ -5,18 +5,17 @@ services:
 cache:
     directories:
         - $HOME/.ccache
-        - $HOME/docker-cache
         - $HOME/Library/Caches/Homebrew
 matrix:
     include:
-        - env: TYPE=style
-        - env: IMAGE_NAME=ubuntu-linux-gcc TAG=14.04
-        - env: IMAGE_NAME=ubuntu-mingw-w32 TAG=14.04 TARGET_OS=win32
-        - env: IMAGE_NAME=ubuntu-mingw-w64 TAG=14.04 TARGET_OS=win64
-        - env: IMAGE_NAME=ubuntu-linux-gcc TAG=18.04
-        - env: IMAGE_NAME=ubuntu-mingw-w32 TAG=18.04 TARGET_OS=win32
-        - env: IMAGE_NAME=ubuntu-mingw-w64 TAG=18.04 TARGET_OS=win64
-        - os: osx
+#        - env: TYPE=style
+#        - env: IMAGE_NAME=ubuntu-linux-gcc IMAGE_TAG=14.04
+#        - env: IMAGE_NAME=ubuntu-mingw-w32 IMAGE_TAG=14.04 TARGET_OS=win32
+#        - env: IMAGE_NAME=ubuntu-mingw-w64 IMAGE_TAG=14.04 TARGET_OS=win64
+        - env: IMAGE_NAME=ubuntu-linux-gcc IMAGE_TAG=18.04
+#        - env: IMAGE_NAME=ubuntu-mingw-w32 IMAGE_TAG=18.04 TARGET_OS=win32
+#        - env: IMAGE_NAME=ubuntu-mingw-w64 IMAGE_TAG=18.04 TARGET_OS=win64
+#        - os: osx
           osx_image: xcode8.3
 install: ${TRAVIS_BUILD_DIR}/.travis/install.sh
 script: ${TRAVIS_BUILD_DIR}/.travis/script.sh
@@ -33,3 +32,6 @@ deploy:
         all_branches: true
         condition: '("$TARGET_OS" = win??)'
     repo: LMMS/lmms
+env:
+  global:
+    secure: ePyXi4i8tMGQ2SSFCgI5J3uF2ctq2o60gMgzByRYTSYs9REM3t4IRbT8CInWF3Te5VfJC3SipyhF9nLpeSlZr6qZ8VNipLfiz5CWRKlzs074wpnI+RaTGT91y4fssEQd0Yf5izU+E4FIpXMqh5lP3M0OGUoZF+0v/544mrpJIVY=
