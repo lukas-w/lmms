@@ -6,15 +6,18 @@ source "$DIR/../scripts/detail/common-build.sh"
 
 IMAGE_NAME=$1
 VERSION=$2
+TAG=$3
 
-if [[ "$TRAVIS_BRANCH" ]]; then
-	BRANCH="$TRAVIS_BRANCH"
-else
-	BRANCH=$(git rev-parse --abbrev-ref HEAD)
+if [ -z "$TAG" ]; then
+	if [[ "$TRAVIS_BRANCH" ]]; then
+		BRANCH="$TRAVIS_BRANCH"
+	else
+		BRANCH=$(git rev-parse --abbrev-ref HEAD)
+	fi
+	TAG=$VERSION-$BRANCH
 fi
-TAG=$VERSION-$BRANCH
 
-if [[ "$3" == "--verbose" ]]; then
+if [[ "$VERBOSE" ]]; then
 	ERR=/dev/stderr
 	OUT=/dev/stdout
 else
@@ -26,12 +29,14 @@ if [ -z "$IMAGE_USER" ]; then
 	IMAGE_USER=lmmsci
 fi
 
-IMAGE=$IMAGE_USER/$IMAGE_PREFIX$IMAGE_NAME
-info "Trying to pull $IMAGE:$TAG"
-if docker pull $IMAGE:$TAG; then
-	info "Download succeeded"
-else
-	info "Download failed"
+if [[ ! "$CI" ]]; then
+	IMAGE=$IMAGE_USER/$IMAGE_PREFIX$IMAGE_NAME
+	info "Trying to pull $IMAGE:$TAG"
+	if docker pull $IMAGE:$TAG; then
+		info "Download succeeded"
+	else
+		info "Download failed"
+	fi
 fi
 
 if [[ "$(docker images -q $IMAGE:$TAG 2> /dev/null)" == "" ]]; then

@@ -5,7 +5,7 @@ CMAKE_FLAGS="$CMAKE_FLAGS -DUSE_WERROR=ON"
 export CMAKE_FLAGS
 
 # Start the docker container
-IMAGE=lmmsci/$IMAGE_NAME:$TAG-$TRAVIS_BRANCH
+IMAGE=localhost:5000/$IMAGE_NAME:$TAG
 CONTAINER_NAME=TRAVIS
 BUILD_DIR=$(pwd)/build
 buildtools/docker/start.sh "$IMAGE" "$CONTAINER_NAME" "$BUILD_DIR"

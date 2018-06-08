@@ -39,8 +39,8 @@ if [[ "$IMAGE_NAME" == ubuntu-linux-* ||
 	info "Compiling"
 	run /src/buildtools/scripts/make.sh
 	if [[ $IMAGE_NAME != ubuntu-mingw-* ]]; then
-		../buildtools/docker/run.sh "$CONTAINER_NAME" /src/buildtools/scripts/make.sh tests
-		../buildtools/docker/run.sh "$CONTAINER_NAME" /build/tests/tests
+		"$DIR/docker/run.sh" "$CONTAINER_NAME" /src/buildtools/scripts/make.sh tests
+		"$DIR/docker/run.sh" "$CONTAINER_NAME" /build/tests/tests
 	fi
 	if [[ $IMAGE_NAME == ubuntu-linux-* || $TAG == "14.04" ]]; then
 		info "Packaging"
