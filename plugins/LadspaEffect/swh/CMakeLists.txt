@@ -22,11 +22,11 @@ FOREACH(_item ${XML_SOURCES})
 	SET(_out_file "${CMAKE_CURRENT_SOURCE_DIR}/ladspa/${_plugin}.c")
 
 	# Coerce XML source file to C
+	set(makestub "${CMAKE_CURRENT_SOURCE_DIR}/ladspa/makestub.pl")
 	ADD_CUSTOM_COMMAND(
 		OUTPUT "${_out_file}"
-		COMMAND ./makestub.pl "${_item}" > "${_out_file}"
-		DEPENDS "${_item}"
-		WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/ladspa"
+		COMMAND "${PERL_EXECUTABLE}" "${makestub}" "${_item}" > "${_out_file}"
+		DEPENDS "${_item}" "${makestub}"
 		VERBATIM
 	)
 
