@@ -1,45 +1,88 @@
-name: CI
+name: ci-win
 on:
   - push
   - pull_request
 jobs:
-  win32:
+  win:
+    strategy:
+      matrix:
+        arch: [win32]
+        qt: ['5.9.9']
     env:
-      QT_VERSION: 5.9.8
       CLCACHE_DIR: C:\clcache
-    runs-on: windows-latest
+      QT_ARCH: ${{ matrix.arch }}_msvc2015
+      VCPKG_DEPS_FILE: '${{ github.workspace }}\vcpkg-deps.txt'
+      VCPKG_REF: '2020.04'
+      VCPKG_PATH: ${{ github.workspace }}\vcpkg
+    runs-on: windows-2019
     steps:
-      - uses: actions/checkout@v1
-      - name: Cache vcpkg packages
-        uses: actions/cache@preview
+      - uses: actions/checkout@v2
+
+      # Install vcpkg dependencies
+      - name: Cache vcpkg
+        uses: actions/cache@v1
+        id: cache-vcpkg
         with:
-          path: "C:/vcpkg/installed"
-          key: vcpkg
-          restore-keys: |
-            vcpkg
-      - name: clcache
-        uses: actions/cache@preview
+          path: "${{ env.VCPKG_PATH }}"
+          key: "vcpkg-${{ env.VCPKG_REF }}-${{ matrix.arch }}-${{ hashFiles(env.VCPKG_DEPS_FILE) }}"
+      - name: Checkout vcpkg
+        uses: actions/checkout@v2
+        if: steps.cache-vcpkg.outputs.cache-hit != 'true'
         with:
-          path: "C:/clcache"
-          key: clcache-win32-${{ github.ref }}
-          restore-keys: |
-            clache-win32-
+          repository: Microsoft/vcpkg
+          ref: ${{ env.VCPKG_REF }}
+          path: ${{ env.VCPKG_PATH }}
+      - name: Bootstrap vcpkg
+        if: steps.cache-vcpkg.outputs.cache-hit != 'true'
+        run: |
+          ${{ env.VCPKG_PATH }}\bootstrap-vcpkg.bat
+      - name: Install dependencies
+        if: steps.cache-vcpkg.outputs.cache-hit != 'true'
+        run: |
+          ${{ env.VCPKG_PATH }}\vcpkg install --triplet x86-windows --recurse @${{ env.VCPKG_DEPS_FILE }}
+
+      # Install Qt
+      - name: Cache Qt
+        id: cache-qt
+        uses: actions/cache@v1
+        with:
+          path: "C:/Qt/${{ matrix.qt }}"
+          key: qt-${{ matrix.qt }}-${{ env.QT_ARCH }}
       - name: Install Qt
+        if: steps.cache-qt.outputs.cache-hit != 'true'
         run: |
           pip install aqtinstall
-          python -m aqt install --outputdir C:\Qt $env:QT_VERSION windows desktop win32_msvc2015
-          dir C:\Qt\Qt$env:QT_VERSION\$env:QT_VERSION
-      - name: Install dependencies
+          python -m aqt install --outputdir C:\Qt ${{ matrix.qt }} windows desktop $env:QT_ARCH
+
+      # Install clcache
+      - name: Install clcache
         run: |
-          vcpkg install --triplet x86-windows --recurse fftw3 libsamplerate libsndfile sdl2
           pip install clcache
+      - name: clcache
+        uses: actions/cache@v1
+        with:
+          path: "C:/clcache"
+          key: clcache-${{ matrix.arch }}-${{ github.sha }}
+          restore-keys: |
+            clache-${{ matrix.arch }}-
+
+      # Build
       - name: Configure
         run: |
           cmake -G "Visual Studio 16 2019" -A Win32                     `
             -S "$env:GITHUB_WORKSPACE" -B "$env:GITHUB_WORKSPACE/build" `
             -DUSE_COMPILE_CACHE=ON                                      `
             -DCMAKE_BUILD_TYPE=RelWithDebInfo                           `
-            -DCMAKE_PREFIX_PATH="c:/Qt/Qt$env:QT_VERSION/$env:QT_VERSION/msvc2015;$env:VCPKG_INSTALLATION_ROOT\installed\x86-windows"
+            -DCMAKE_PREFIX_PATH="c:/Qt/${{ matrix.qt }}/msvc2015;$env:VCPKG_PATH\installed\x86-windows"
       - name: Build
         run: |
           cmake --build "$env:GITHUB_WORKSPACE/build" -- /maxcpucount:4
+
+      # Build and run tests
+      #- name: Build tests
+      #  run: |
+      #    cmake --build "$env:GITHUB_WORKSPACE/build" --target tests -- /maxcpucount:4
+      #- name: Run tests
+      #  run: |
+      #    $env:GITHUB_WORKSPACE/build/tests/tests.exe
+          
