@@ -30,6 +30,7 @@
 #include <QPixmap>
 #include <QVBoxLayout>
 
+#include "embed.h"
 #include "ComboBox.h"
 #include "GroupBox.h"
 #include "GuiApplication.h"

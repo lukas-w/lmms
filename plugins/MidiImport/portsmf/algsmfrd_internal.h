@@ -1,4 +1,5 @@
 /* algsmfrd_internal.h -- interface from allegrosmfrd.cpp to allegro.cpp */
+#pragma once
 
 #include "allegro.h"
 

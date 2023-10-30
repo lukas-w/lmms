@@ -29,6 +29,7 @@
 #include <QMenu>
 #include <QPainter>
 
+#include "embed.h"
 #include "AutomationClip.h"
 #include "Clipboard.h"
 #include "DataFile.h"

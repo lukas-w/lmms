@@ -1,3 +1,4 @@
+#pragma once
 typedef struct {
     int writePos;
     int bufferSize;

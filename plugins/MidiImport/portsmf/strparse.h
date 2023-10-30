@@ -1,4 +1,5 @@
 // strparse.h -- header for String_parse class
+#pragma once
 
 class String_parse {
 public:

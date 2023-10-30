@@ -25,6 +25,7 @@
 #include "LinkedModelGroupViews.h"
 
 #include <QPushButton>
+#include "embed.h"
 #include "Controls.h"
 #include "ControlLayout.h"
 #include "LinkedModelGroups.h"

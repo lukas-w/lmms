@@ -25,6 +25,8 @@
 #ifndef SACONTROLS_H
 #define SACONTROLS_H
 
+#include <QColor>
+
 #include "ComboBoxModel.h"
 #include "EffectControls.h"
 

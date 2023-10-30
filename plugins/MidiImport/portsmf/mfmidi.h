@@ -1,3 +1,4 @@
+#pragma once
 #include <cstddef>
 
 #define NOTEOFF 0x80

@@ -31,6 +31,7 @@
 #include <QMdiSubWindow>
 #include <QMenu>
 
+#include "embed.h"
 #include "AudioEngine.h"
 #include "ConfigManager.h"
 #include "Engine.h"

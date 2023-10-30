@@ -26,6 +26,7 @@
 
 #include "lmmsversion.h"
 
+#include "embed.h"
 #include "LmmsStyle.h"
 #include "LmmsPalette.h"
 

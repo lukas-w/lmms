@@ -31,6 +31,7 @@
 #include <QMenu>
 #include <QPainter>
 
+#include "embed.h"
 #include "ConfigManager.h"
 #include "DeprecationHelper.h"
 #include "GuiApplication.h"

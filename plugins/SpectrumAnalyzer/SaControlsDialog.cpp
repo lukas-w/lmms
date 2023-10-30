@@ -30,6 +30,7 @@
 #include <QSplitter>
 #include <QWidget>
 
+#include "embed.h"
 #include "ComboBox.h"
 #include "ComboBoxModel.h"
 #include "Knob.h"

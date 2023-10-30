@@ -33,6 +33,7 @@
 
 #include "lmms_math.h"
 
+#include "embed.h"
 #include "MixerView.h"
 #include "Knob.h"
 #include "MixerLine.h"

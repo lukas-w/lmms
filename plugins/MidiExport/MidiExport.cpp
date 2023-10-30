@@ -27,6 +27,8 @@
 
 #include "MidiExport.h"
 
+#include <QDataStream>
+
 #include "TrackContainer.h"
 #include "DataFile.h"
 #include "InstrumentTrack.h"

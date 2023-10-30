@@ -38,32 +38,6 @@
 #include "lmms_math.h"
 #include "BandLimitedWave.h"
 
-//
-//	UI Macros
-//
-
-#define makeknob( name, x, y, hint, unit, oname ) 		\
-	name = new Knob( KnobType::Styled, view ); 				\
-	name ->move( x, y );								\
-	name ->setHintText( hint, unit );             \
-	name ->setObjectName( oname );						\
-	name ->setFixedSize( 20, 20 );
-
-#define maketsknob( name, x, y, hint, unit, oname ) 		\
-	name = new TempoSyncKnob( KnobType::Styled, view ); 				\
-	name ->move( x, y );								\
-	name ->setHintText( hint, unit );		\
-	name ->setObjectName( oname );						\
-	name ->setFixedSize( 20, 20 );
-
-#define maketinyled( name, x, y, ttip ) \
-	name = new PixmapButton( view, nullptr ); 	\
-	name -> setCheckable( true );			\
-	name -> move( x, y );					\
-	name -> setActiveGraphic( PLUGIN_NAME::getIconPixmap( "tinyled_on" ) ); \
-	name -> setInactiveGraphic( PLUGIN_NAME::getIconPixmap( "tinyled_off" ) ); \
-	name->setToolTip(ttip);
-
 namespace lmms
 {
 

@@ -28,6 +28,7 @@
 #include <QMenu>
 #include <QPainter>
 
+#include "embed.h"
 #include "Engine.h"
 #include "GuiApplication.h"
 #include "MainWindow.h"

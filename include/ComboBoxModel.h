@@ -30,10 +30,11 @@
 #include <vector>
 
 #include "AutomatableModel.h"
-#include "embed.h"
 
 namespace lmms
 {
+
+class PixmapLoader;
 
 class LMMS_EXPORT ComboBoxModel : public IntModel
 {
@@ -42,19 +43,15 @@ class LMMS_EXPORT ComboBoxModel : public IntModel
 public:
 	ComboBoxModel( Model* parent = nullptr,
 					const QString& displayName = QString(),
-					bool isDefaultConstructed = false ) :
-		IntModel( 0, 0, 0, parent, displayName, isDefaultConstructed )
-	{
-	}
+					bool isDefaultConstructed = false );
 
-	~ComboBoxModel() override
-	{
-		clear();
-	}
+	~ComboBoxModel() override;
 
-	void addItem( QString item, std::unique_ptr<PixmapLoader> loader = nullptr );
+	void addItem( QString item );
+	void addItem( QString item, std::unique_ptr<PixmapLoader> loader );
 
-	void replaceItem(std::size_t index, QString item, std::unique_ptr<PixmapLoader> loader = nullptr);
+	void replaceItem(std::size_t index, QString item);
+	void replaceItem(std::size_t index, QString item, std::unique_ptr<PixmapLoader> loader );
 
 	void clear();
 

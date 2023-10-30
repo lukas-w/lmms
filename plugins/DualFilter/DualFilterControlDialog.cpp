@@ -24,6 +24,7 @@
  */
 
 
+#include "embed.h"
 #include "DualFilterControlDialog.h"
 #include "DualFilterControls.h"
 #include "Knob.h"

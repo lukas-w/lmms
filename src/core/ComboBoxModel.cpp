@@ -26,16 +26,39 @@
 
 #include <cassert>
 
+#include "embed.h"
+
 namespace lmms
 {
 
 using std::unique_ptr;
 using std::move;
 
+ComboBoxModel::ComboBoxModel(Model* parent, const QString& displayName, bool isDefaultConstructed)
+	:
+	IntModel( 0, 0, 0, parent, displayName, isDefaultConstructed )
+{
+}
+
+ComboBoxModel::~ComboBoxModel()
+{
+	clear();
+}
+
+void ComboBoxModel::addItem(QString item)
+{
+	addItem( item, nullptr );
+}
+
 void ComboBoxModel::addItem( QString item, unique_ptr<PixmapLoader> loader )
 {
 	m_items.emplace_back( move(item), move(loader) );
 	setRange( 0, m_items.size() - 1 );
+}
+
+void ComboBoxModel::replaceItem(std::size_t index, QString item)
+{
+	replaceItem(index, item, nullptr);
 }
 
 
