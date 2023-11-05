@@ -44,8 +44,12 @@
 #	include <QSharedMemory>
 #endif
 
+#ifndef CMAKE_UNITY_ID
+#define CMAKE_UNITY_ID
+#endif
 
 namespace {
+namespace CMAKE_UNITY_ID {
 
 template<typename F>
 int retryWhileInterrupted(F&& function) noexcept(std::is_nothrow_invocable_v<F>)
@@ -65,6 +69,7 @@ void deleteShmObject(const char* name) noexcept { shm_unlink(name); }
 using FileDescriptor = lmms::UniqueNullableResource<int, -1, deleteFileDescriptor>;
 using ShmObject = lmms::UniqueNullableResource<const char*, nullptr, deleteShmObject>;
 
+} // namespace CMAKE_UNITY_ID
 } // namespace
 
 
@@ -80,8 +85,8 @@ public:
 		m_key{"/" + key}
 	{
 		const auto openFlags = readOnly ? O_RDONLY : O_RDWR;
-		const auto fd = FileDescriptor{
-			retryWhileInterrupted([&]() noexcept { return shm_open(m_key.c_str(), openFlags, 0); })
+		const auto fd = CMAKE_UNITY_ID::FileDescriptor{
+			CMAKE_UNITY_ID::retryWhileInterrupted([&]() noexcept { return shm_open(m_key.c_str(), openFlags, 0); })
 		};
 		if (!fd)
 		{
@@ -105,15 +110,15 @@ public:
 		m_key{"/" + key},
 		m_size{size}
 	{
-		const auto fd = FileDescriptor{
-			retryWhileInterrupted([&]() noexcept { return shm_open(m_key.c_str(), O_RDWR | O_CREAT | O_EXCL, 0600); })
+		const auto fd = CMAKE_UNITY_ID::FileDescriptor{
+			CMAKE_UNITY_ID::retryWhileInterrupted([&]() noexcept { return shm_open(m_key.c_str(), O_RDWR | O_CREAT | O_EXCL, 0600); })
 		};
 		if (fd.get() == -1)
 		{
 			throw std::system_error{errno, std::generic_category(), "SharedMemoryImpl: shm_open() failed"};
 		}
 		m_object.reset(m_key.c_str());
-		if (retryWhileInterrupted([&]() noexcept { return ftruncate(fd.get(), m_size); }) == -1)
+		if (CMAKE_UNITY_ID::retryWhileInterrupted([&]() noexcept { return ftruncate(fd.get(), m_size); }) == -1)
 		{
 			throw std::system_error{errno, std::generic_category(), "SharedMemoryImpl: ftruncate() failed"};
 		}
@@ -139,7 +144,7 @@ private:
 	std::string m_key;
 	std::size_t m_size;
 	void* m_mapping;
-	ShmObject m_object;
+	CMAKE_UNITY_ID::ShmObject m_object;
 };
 
 #else

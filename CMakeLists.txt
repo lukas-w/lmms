@@ -1,4 +1,4 @@
-CMAKE_MINIMUM_REQUIRED(VERSION 3.9)
+CMAKE_MINIMUM_REQUIRED(VERSION 3.16)
 
 # Set the given policy to NEW. If it does not exist, it will not be set. If it
 # is already set to NEW (most likely due to predating the minimum required CMake
@@ -619,22 +619,22 @@ FIND_PACKAGE(Samplerate 0.1.8 MODULE REQUIRED)
 
 # set compiler flags
 IF(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-	SET(WERROR_FLAGS "-Wall -Werror=unused-function -Wno-sign-compare -Wno-strict-overflow")
+	SET(WERROR_FLAGS -Wall -Werror=unused-function -Wno-sign-compare -Wno-strict-overflow)
 	OPTION(USE_WERROR "Add -werror to the build flags. Stops the build on warnings" OFF)
 	IF(${USE_WERROR})
-		SET(WERROR_FLAGS "${WERROR_FLAGS} -Werror")
+		LIST(APPEND WERROR_FLAGS -Werror)
 	ENDIF()
 
 	# Due to a regression in gcc-4.8.X, we need to disable array-bounds check
 	IF (CMAKE_COMPILER_IS_GNUCXX AND ((CMAKE_CXX_COMPILER_VERSION VERSION_EQUAL "4.8.0") OR (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER "4.8.0") OR LMMS_BUILD_WIN32))
-		SET(WERROR_FLAGS "${WERROR_FLAGS} -Wno-array-bounds -Wno-attributes")
+		LIST(APPEND WERROR_FLAGS -Wno-array-bounds -Wno-attributes)
 	ENDIF()
 ELSEIF(MSVC)
 	# Remove any existing /W flags
 	STRING(REGEX REPLACE "/W[0-4]" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
 	SET(WERROR_FLAGS "/W2")
 	IF(${USE_WERROR})
-		SET(WERROR_FLAGS "${WERROR_FLAGS} /WX")
+		LIST(APPEND WERROR_FLAGS "/WX")
 	ENDIF()
 ENDIF()
 
@@ -646,11 +646,6 @@ IF(NOT CMAKE_BUILD_TYPE)
 	SET_PROPERTY(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release"
 		"MinSizeRel" "RelWithDebInfo")
 ENDIF()
-
-SET(CMAKE_C_FLAGS "${WERROR_FLAGS} ${CMAKE_C_FLAGS}")
-SET(CMAKE_CXX_FLAGS "${WERROR_FLAGS} ${CMAKE_CXX_FLAGS}")
-SET(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -DLMMS_DEBUG")
-SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DLMMS_DEBUG")
 
 if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.16")
 	set(NOOP_COMMAND "${CMAKE_COMMAND}" "-E" "true")
@@ -690,11 +685,11 @@ ENDIF()
 # we somehow have to make LMMS-binary depend on MOC-files
 ADD_FILE_DEPENDENCIES("${CMAKE_BINARY_DIR}/lmmsconfig.h")
 
+SET(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
 IF(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
 	IF(WIN32)
 		SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-attributes")
-	ELSE(WIN32)
-		SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -DPIC")
 	ENDIF(WIN32)
 elseif(MSVC)
 	# Use UTF-8 as the source and execution character set

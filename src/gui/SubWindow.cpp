@@ -92,6 +92,13 @@ SubWindow::SubWindow( QWidget *parent, Qt::WindowFlags windowFlags ) :
 	m_windowTitle->setAttribute( Qt::WA_TransparentForMouseEvents, true );
 	m_windowTitle->setGraphicsEffect( m_shadow );
 
+	// Workaround for Qt < 5.12.0, see
+	// - https://stackoverflow.com/questions/10755058/qflags-enum-type-conversion-fails-all-of-a-sudden
+	// - https://stackoverflow.com/questions/39919142/broken-bitwise-or-operator-in-a-qt-project
+	// -
+	// - https://code.qt.io/cgit/qt/qtbase.git/commit/src/corelib/global/qnamespace.h?id=e759d38d491d9044a0558b1d45911e3b4115e772
+	using ::operator|;
+
 	// disable the minimize button
 	setWindowFlags( Qt::SubWindow | Qt::WindowMaximizeButtonHint |
 		Qt::WindowSystemMenuHint | Qt::WindowCloseButtonHint |
