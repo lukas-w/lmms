@@ -45,11 +45,6 @@
 #endif
 
 
-namespace lmms::detail {
-
-#if _POSIX_SHARED_MEMORY_OBJECTS > 0
-
-
 namespace {
 
 template<typename F>
@@ -67,10 +62,16 @@ int retryWhileInterrupted(F&& function) noexcept(std::is_nothrow_invocable_v<F>)
 void deleteFileDescriptor(int fd) noexcept { retryWhileInterrupted([fd]() noexcept { return close(fd); }); }
 void deleteShmObject(const char* name) noexcept { shm_unlink(name); }
 
-using FileDescriptor = UniqueNullableResource<int, -1, deleteFileDescriptor>;
-using ShmObject = UniqueNullableResource<const char*, nullptr, deleteShmObject>;
+using FileDescriptor = lmms::UniqueNullableResource<int, -1, deleteFileDescriptor>;
+using ShmObject = lmms::UniqueNullableResource<const char*, nullptr, deleteShmObject>;
 
 } // namespace
+
+
+namespace lmms::detail {
+
+#if _POSIX_SHARED_MEMORY_OBJECTS > 0
+
 
 class SharedMemoryImpl
 {
