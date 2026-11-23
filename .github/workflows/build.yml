@@ -10,6 +10,8 @@ env:
     -DCMAKE_BUILD_TYPE=RelWithDebInfo
     -DTARGET_UARCH=official
     -DUSE_COMPILE_CACHE=ON
+  CCACHE_MAXSIZE: 0
+  CCACHE_NOCOMPRESS: 1
 jobs:
   linux-x86_64:
     name: linux-x86_64
@@ -17,8 +19,6 @@ jobs:
     env:
       CMAKE_OPTS: >-
         -DWANT_DEBUG_CPACK=ON
-      CCACHE_MAXSIZE: 0
-      CCACHE_NOCOMPRESS: 1
     steps:
       - name: Configure git
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
@@ -105,8 +105,6 @@ jobs:
     env:
       CMAKE_OPTS: >-
         -DWANT_DEBUG_CPACK=ON
-      CCACHE_MAXSIZE: 0
-      CCACHE_NOCOMPRESS: 1
       DEBIAN_FRONTEND: noninteractive
     steps:
       - name: Configure git
@@ -199,8 +197,6 @@ jobs:
         -Werror=dev
         -DUSE_WERROR=OFF
         -DWANT_QT6=ON
-      CCACHE_MAXSIZE: 0
-      CCACHE_NOCOMPRESS: 1
       DEVELOPER_DIR: /Applications/Xcode_${{ matrix.xcode }}.app/Contents/Developer
     steps:
       - name: Check out
@@ -286,8 +282,6 @@ jobs:
     env:
       CMAKE_OPTS: >-
         -Werror=dev
-      CCACHE_MAXSIZE: 0
-      CCACHE_NOCOMPRESS: 1
     steps:
       - name: Configure git
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
@@ -356,8 +350,6 @@ jobs:
     name: msvc-x64
     runs-on: windows-2025-vs2026
     env:
-      CCACHE_MAXSIZE: 0
-      CCACHE_NOCOMPRESS: 1
       CMAKE_BUILD_PARALLEL_LEVEL: 4
       CMAKE_OPTS: >-
         -Werror=dev
@@ -449,8 +441,6 @@ jobs:
         -DUSE_WERROR=OFF
         -DWANT_QT6=ON
         -DCPACK_NSIS_EXECUTABLE=/clang64/bin/makensis.exe
-      CCACHE_MAXSIZE: 0
-      CCACHE_NOCOMPRESS: 1
       CMAKE_BUILD_PARALLEL_LEVEL: 4
     steps:
       - name: Check out
