@@ -13,95 +13,12 @@ env:
   CCACHE_MAXSIZE: 0
   CCACHE_NOCOMPRESS: 1
 jobs:
-  linux-x86_64:
-    name: linux-x86_64
-    runs-on: ubuntu-22.04
-    env:
-      CMAKE_OPTS: >-
-        -DWANT_DEBUG_CPACK=ON
-    steps:
-      - name: Configure git
-        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
-      - name: Check out
-        uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-          submodules: recursive
-      - name: Set up environment
-        run: |
-          echo "CMAKE_BUILD_PARALLEL_LEVEL=$(nproc)" | tee -a "$GITHUB_ENV"
-      - name: Clone fltk
-        uses: actions/checkout@v7
-        with:
-          repository: fltk/fltk
-          path: fltk
-          ref: 27d991f046bdebb12bfd58f7c05a19f135979c29
-          fetch-depth: 1
-      - name: Configure winehq
-        run: |
-          sudo dpkg --add-architecture i386
-          sudo mkdir -pm755 /etc/apt/keyrings
-          wget -O - https://dl.winehq.org/wine-builds/winehq.key | \
-          sudo gpg --dearmor -o /etc/apt/keyrings/winehq-archive.key -
-          sudo wget -NP /etc/apt/sources.list.d/ \
-          https://dl.winehq.org/wine-builds/ubuntu/dists/$(lsb_release -cs)/winehq-$(lsb_release -cs).sources
-      - name: Install packages
-        run: |
-          sudo apt-get update -y
-          sudo apt-get install -y --no-install-recommends \
-            $(xargs < .github/workflows/deps-ubuntu-24.04-gcc.txt)
-          sudo apt-get install -y --install-recommends g++-multilib gcc-multilib winehq-devel wine-devel-dev
-          sudo apt-get install -y --install-recommends \
-            $(xargs < .github/workflows/deps-ubuntu-24.04-fltk.txt)
-      - name: Cache ccache data
-        uses: actions/cache@v6
-        with:
-          key: ccache-${{ github.job }}-${{ github.ref }}-${{ github.run_id }}
-          restore-keys: |
-            ccache-${{ github.job }}-${{ github.ref }}-
-            ccache-${{ github.job }}-
-          path: ~/.cache/ccache
-      - name: Configure fltk
-        run: |
-          cmake -S fltk -B fltk/build -DFLTK_BUILD_SHARED_LIBS=ON -DFLTK_BACKEND_WAYLAND=ON \
-            -DFLTK_USE_LIBDECOR_GTK=OFF -DFLTK_BUILD_TEST=OFF -DFLTK_BUILD_GL=OFF
-      - name: Install fltk
-        run: |
-          cmake --build fltk/build
-          sudo cmake --install fltk/build --prefix /usr
-      - name: Configure
-        run: |
-          ccache --zero-stats
-          source /opt/qt5*/bin/qt5*-env.sh || true
-          cmake -S . \
-                -B build \
-                $CMAKE_COMMON_OPTS $CMAKE_OPTS
-      - name: Build
-        run: cmake --build build
-      - name: Run tests
-        run: |
-          cd build/tests
-          ctest --output-on-failure -j2
-      - name: Package
-        run: |
-          cmake --build build --target package
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v7
-        with:
-          archive: false
-          path: build/lmms-*.AppImage
-      - name: Trim ccache and print statistics
-        run: |
-          ccache --cleanup
-          echo "[ccache config]"
-          ccache --show-config
-          echo "[ccache stats]"
-          ccache --show-stats
-        env:
-          CCACHE_MAXSIZE: 500M
-  linux-arm64:
-    name: linux-arm64
-    runs-on: ubuntu-24.04-arm
+  linux:
+    strategy:
+      matrix:
+        arch: [ x86_64, arm64 ]
+    name: linux-${{ matrix.arch }}
+    runs-on: ${{ matrix.arch == 'x86_64' && 'ubuntu-22.04' || 'ubuntu-24.04-arm' }}
     env:
       CMAKE_OPTS: >-
         -DWANT_DEBUG_CPACK=ON
@@ -124,20 +41,33 @@ jobs:
           path: fltk
           ref: 27d991f046bdebb12bfd58f7c05a19f135979c29
           fetch-depth: 1
-      - name: Install system packages
+      - name: Configure winehq
+        if: ${{ matrix.arch == 'x86_64' }}
+        run: |
+          sudo dpkg --add-architecture i386
+          sudo mkdir -pm755 /etc/apt/keyrings
+          wget -O - https://dl.winehq.org/wine-builds/winehq.key | \
+          sudo gpg --dearmor -o /etc/apt/keyrings/winehq-archive.key -
+          sudo wget -NP /etc/apt/sources.list.d/ \
+          https://dl.winehq.org/wine-builds/ubuntu/dists/$(lsb_release -cs)/winehq-$(lsb_release -cs).sources
+      - name: Install packages
         run: |
           sudo apt-get update -y
           sudo apt-get install -y --no-install-recommends \
             $(xargs < .github/workflows/deps-ubuntu-24.04-gcc.txt)
           sudo apt-get install -y --install-recommends \
             $(xargs < .github/workflows/deps-ubuntu-24.04-fltk.txt)
+      - name: Install wine packages
+        if: ${{ matrix.arch == 'x86_64' }}
+        run: |
+          sudo apt-get install -y --install-recommends g++-multilib gcc-multilib winehq-devel wine-devel-dev
       - name: Cache ccache data
         uses: actions/cache@v6
         with:
-          key: ccache-${{ github.job }}-${{ github.ref }}-${{ github.run_id }}
+          key: ccache-${{ github.job }}-${{ matrix.arch }}-${{ github.ref }}-${{ github.run_id }}
           restore-keys: |
-            ccache-${{ github.job }}-${{ github.ref }}-
-            ccache-${{ github.job }}-
+            ccache-${{ github.job }}-${{ matrix.arch }}-${{ github.ref }}-
+            ccache-${{ github.job }}-${{ matrix.arch }}
           path: ~/.cache/ccache
       - name: Configure fltk
         run: |
@@ -150,6 +80,7 @@ jobs:
       - name: Configure
         run: |
           ccache --zero-stats
+          source /opt/qt5*/bin/qt5*-env.sh || true
           cmake -S . \
                 -B build \
                 $CMAKE_COMMON_OPTS $CMAKE_OPTS
