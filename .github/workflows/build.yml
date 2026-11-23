@@ -4,16 +4,18 @@ name: build
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
+env:
+  CMAKE_COMMON_OPTS: >-
+    -DUSE_WERROR=ON
+    -DCMAKE_BUILD_TYPE=RelWithDebInfo
+    -DTARGET_UARCH=official
+    -DUSE_COMPILE_CACHE=ON
 jobs:
   linux-x86_64:
     name: linux-x86_64
     runs-on: ubuntu-22.04
     env:
       CMAKE_OPTS: >-
-        -DUSE_WERROR=ON
-        -DCMAKE_BUILD_TYPE=RelWithDebInfo
-        -DTARGET_UARCH=official
-        -DUSE_COMPILE_CACHE=ON
         -DWANT_DEBUG_CPACK=ON
       CCACHE_MAXSIZE: 0
       CCACHE_NOCOMPRESS: 1
@@ -73,7 +75,7 @@ jobs:
           source /opt/qt5*/bin/qt5*-env.sh || true
           cmake -S . \
                 -B build \
-                $CMAKE_OPTS
+                $CMAKE_COMMON_OPTS $CMAKE_OPTS
       - name: Build
         run: cmake --build build
       - name: Run tests
@@ -102,10 +104,6 @@ jobs:
     runs-on: ubuntu-24.04-arm
     env:
       CMAKE_OPTS: >-
-        -DUSE_WERROR=ON
-        -DCMAKE_BUILD_TYPE=RelWithDebInfo
-        -DTARGET_UARCH=official
-        -DUSE_COMPILE_CACHE=ON
         -DWANT_DEBUG_CPACK=ON
       CCACHE_MAXSIZE: 0
       CCACHE_NOCOMPRESS: 1
@@ -156,7 +154,7 @@ jobs:
           ccache --zero-stats
           cmake -S . \
                 -B build \
-                $CMAKE_OPTS
+                $CMAKE_COMMON_OPTS $CMAKE_OPTS
       - name: Build
         run: cmake --build build
       - name: Run tests
@@ -200,10 +198,7 @@ jobs:
       CMAKE_OPTS: >-
         -Werror=dev
         -DUSE_WERROR=OFF
-        -DCMAKE_BUILD_TYPE=RelWithDebInfo
-        -DTARGET_UARCH=official
         -DWANT_QT6=ON
-        -DUSE_COMPILE_CACHE=ON
       CCACHE_MAXSIZE: 0
       CCACHE_NOCOMPRESS: 1
       DEVELOPER_DIR: /Applications/Xcode_${{ matrix.xcode }}.app/Contents/Developer
@@ -252,7 +247,7 @@ jobs:
                 -B build \
                 -DCMAKE_OSX_ARCHITECTURES=${{ matrix.arch }} \
                 -DCMAKE_OSX_DEPLOYMENT_TARGET=${{ matrix.macosx_deployment_target }} \
-                $CMAKE_OPTS
+                $CMAKE_COMMON_OPTS $CMAKE_OPTS
       - name: Build
         run: cmake --build build
       - name: Run tests
@@ -291,10 +286,6 @@ jobs:
     env:
       CMAKE_OPTS: >-
         -Werror=dev
-        -DUSE_WERROR=ON
-        -DCMAKE_BUILD_TYPE=RelWithDebInfo
-        -DTARGET_UARCH=official
-        -DUSE_COMPILE_CACHE=ON
       CCACHE_MAXSIZE: 0
       CCACHE_NOCOMPRESS: 1
     steps:
@@ -339,7 +330,7 @@ jobs:
                 -B build \
                 -DCMAKE_TOOLCHAIN_FILE="./cmake/toolchains/x64-mingw-vcpkg.cmake" \
                 -DVCPKG_MANIFEST_INSTALL="${{ env.should_install_manifest }}" \
-                $CMAKE_OPTS
+                $CMAKE_COMMON_OPTS $CMAKE_OPTS
         env:
           should_install_manifest:
             ${{ steps.cache-deps.outputs.cache-hit == 'true' && 'NO' || 'YES' }}
@@ -368,6 +359,11 @@ jobs:
       CCACHE_MAXSIZE: 0
       CCACHE_NOCOMPRESS: 1
       CMAKE_BUILD_PARALLEL_LEVEL: 4
+      CMAKE_OPTS: >-
+        -Werror=dev
+        -DWANT_QT6=ON
+        -DVCPKG_TARGET_TRIPLET="x64-windows"
+        -DVCPKG_HOST_TRIPLET="x64-windows"
     steps:
       - name: Check out
         uses: actions/checkout@v7
@@ -414,14 +410,8 @@ jobs:
             -B build `
             -G Ninja `
             --toolchain C:/vcpkg/scripts/buildsystems/vcpkg.cmake `
-            -Werror=dev `
-            -DCMAKE_BUILD_TYPE=RelWithDebInfo `
-            -DTARGET_UARCH=official `
-            -DWANT_QT6=ON `
-            -DUSE_COMPILE_CACHE=ON `
-            -DUSE_WERROR=ON `
-            -DVCPKG_TARGET_TRIPLET="x64-windows" `
-            -DVCPKG_HOST_TRIPLET="x64-windows" `
+            ${{ env.CMAKE_COMMON_OPTS }} `
+            ${{ env.CMAKE_OPTS }} `
             -DVCPKG_MANIFEST_INSTALL="${{ env.should_install_manifest }}"
         env:
           should_install_manifest:
@@ -456,10 +446,8 @@ jobs:
         shell: msys2 {0}
     env:
       CMAKE_OPTS: >-
-        -DCMAKE_BUILD_TYPE=RelWithDebInfo
-        -DTARGET_UARCH=official
+        -DUSE_WERROR=OFF
         -DWANT_QT6=ON
-        -DUSE_COMPILE_CACHE=ON
         -DCPACK_NSIS_EXECUTABLE=/clang64/bin/makensis.exe
       CCACHE_MAXSIZE: 0
       CCACHE_NOCOMPRESS: 1
@@ -496,7 +484,7 @@ jobs:
       - name: Configure
         run: |
           /clang64/bin/ccache.exe --zero-stats
-          cmake -B build $CMAKE_OPTS
+          cmake -B build $CMAKE_COMMON_OPTS $CMAKE_OPTS
       - name: Build
         run: cmake --build build
       - name: Package
